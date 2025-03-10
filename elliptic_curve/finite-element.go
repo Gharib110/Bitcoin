@@ -2,18 +2,19 @@ package elliptic_curve
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 	"os"
 )
 
 type FieldElement struct {
-	order uint64
-	num   uint64
+	order *big.Int
+	num   *big.Int
 }
 
-func NewFieldElement(order uint64, num uint64) *FieldElement {
-	if num >= order {
-		err := fmt.Sprintf("num %d is greater than order %d", num, order)
+func NewFieldElement(order *big.Int, num *big.Int) *FieldElement {
+	if order.Cmp(num) == -1 {
+		err := fmt.Sprintf("num %s is greater than order %s",
+			num.String(), order.String())
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -22,21 +23,25 @@ func NewFieldElement(order uint64, num uint64) *FieldElement {
 }
 
 func (el *FieldElement) String() string {
-	return fmt.Sprintf("FieldElement{order: %d, num: %d}", el.order, el.num)
+	return fmt.Sprintf("FieldElement{order: %s, num: %s}",
+		el.order.String(), el.num.String())
 }
 
 func (el *FieldElement) EqualTo(other *FieldElement) bool {
-	return el.order == other.order && el.num == other.num
+	return el.order.Cmp(other.order) == 0 && el.num.Cmp(other.num) == 0
 }
 
 func (el *FieldElement) Add(other *FieldElement) *FieldElement {
 	el.CheckOrder(other)
 
-	return &FieldElement{el.order, (el.num + other.num) % el.order}
+	var op big.Int
+	return &FieldElement{el.order,
+		op.Mod(op.Add(el.num, other.num), el.order)}
 }
 
 func (el *FieldElement) Negate() *FieldElement {
-	return &FieldElement{el.order, el.order - el.num}
+	var op big.Int
+	return &FieldElement{el.order, op.Sub(el.order, el.num)}
 }
 
 func (el *FieldElement) Sub(other *FieldElement) *FieldElement {
@@ -45,7 +50,7 @@ func (el *FieldElement) Sub(other *FieldElement) *FieldElement {
 }
 
 func (el *FieldElement) CheckOrder(other *FieldElement) {
-	if el.order != other.order {
+	if el.order.Cmp(other.order) != 0 {
 		err := fmt.Sprintf("Adding different order of %d and %d", el.order, other.order)
 		fmt.Println(err)
 		os.Exit(1)
@@ -54,14 +59,21 @@ func (el *FieldElement) CheckOrder(other *FieldElement) {
 
 func (el *FieldElement) Mul(other *FieldElement) *FieldElement {
 	el.CheckOrder(other)
-	return NewFieldElement(el.order, (el.num*other.num)%el.order)
+	var op big.Int
+	mul := op.Mul(el.num, other.num)
+	return NewFieldElement(el.order, op.Mod(mul, el.order))
 }
 
-func (el *FieldElement) Pow(pow int64) *FieldElement {
-	return NewFieldElement(el.order,
-		uint64(math.Pow(float64(el.num), float64(pow)))%el.order)
+func (el *FieldElement) Pow(pow *big.Int) *FieldElement {
+	var op big.Int
+	powRes := op.Exp(el.num, pow, nil)
+	modRes := op.Mod(powRes, el.order)
+	return NewFieldElement(el.order, modRes)
 }
 
-func (el *FieldElement) ScalarMul(r uint64) *FieldElement {
-	return NewFieldElement(el.order, (r*el.num)%el.order)
+func (el *FieldElement) ScalarMul(r *big.Int) *FieldElement {
+	var op big.Int
+	res := op.Mul(el.num, r)
+	res = op.Mod(res, el.order)
+	return NewFieldElement(el.order, res)
 }
