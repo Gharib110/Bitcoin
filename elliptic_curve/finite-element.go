@@ -2,6 +2,7 @@ package elliptic_curve
 
 import (
 	"fmt"
+	"math"
 	"os"
 )
 
@@ -29,11 +30,7 @@ func (el *FieldElement) EqualTo(other *FieldElement) bool {
 }
 
 func (el *FieldElement) Add(other *FieldElement) *FieldElement {
-	if el.order != other.order {
-		err := fmt.Sprintf("Adding different order of %d and %d", el.order, other.order)
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	el.CheckOrder(other)
 
 	return &FieldElement{el.order, (el.num + other.num) % el.order}
 }
@@ -43,5 +40,28 @@ func (el *FieldElement) Negate() *FieldElement {
 }
 
 func (el *FieldElement) Sub(other *FieldElement) *FieldElement {
+	el.CheckOrder(other)
 	return el.Add(other.Negate())
+}
+
+func (el *FieldElement) CheckOrder(other *FieldElement) {
+	if el.order != other.order {
+		err := fmt.Sprintf("Adding different order of %d and %d", el.order, other.order)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func (el *FieldElement) Mul(other *FieldElement) *FieldElement {
+	el.CheckOrder(other)
+	return NewFieldElement(el.order, (el.num*other.num)%el.order)
+}
+
+func (el *FieldElement) Pow(pow int64) *FieldElement {
+	return NewFieldElement(el.order,
+		uint64(math.Pow(float64(el.num), float64(pow)))%el.order)
+}
+
+func (el *FieldElement) ScalarMul(r uint64) *FieldElement {
+	return NewFieldElement(el.order, (r*el.num)%el.order)
 }
