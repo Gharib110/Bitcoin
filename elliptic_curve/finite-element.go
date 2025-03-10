@@ -43,5 +43,5 @@ func (el *FieldElement) Negate() *FieldElement {
 }
 
 func (el *FieldElement) Sub(other *FieldElement) *FieldElement {
-	return nil
+	return el.Add(other.Negate())
 }
