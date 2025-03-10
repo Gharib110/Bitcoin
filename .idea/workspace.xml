@@ -5,7 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0a6a1729-e645-42fa-b4ec-a5a4e7fa2891" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/elliptic_curve/finite-element.go" beforeDir="false" afterPath="$PROJECT_DIR$/elliptic_curve/finite-element.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/elliptic_curve/point.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
