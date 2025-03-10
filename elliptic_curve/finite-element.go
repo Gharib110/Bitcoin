@@ -66,7 +66,8 @@ func (el *FieldElement) Mul(other *FieldElement) *FieldElement {
 
 func (el *FieldElement) Pow(pow *big.Int) *FieldElement {
 	var op big.Int
-	powRes := op.Exp(el.num, pow, nil)
+	t := op.Mod(pow, op.Sub(el.order, big.NewInt(int64(1))))
+	powRes := op.Exp(el.num, t, nil)
 	modRes := op.Mod(powRes, el.order)
 	return NewFieldElement(el.order, modRes)
 }
@@ -76,4 +77,11 @@ func (el *FieldElement) ScalarMul(r *big.Int) *FieldElement {
 	res := op.Mul(el.num, r)
 	res = op.Mod(res, el.order)
 	return NewFieldElement(el.order, res)
+}
+
+func (el *FieldElement) Div(other *FieldElement) *FieldElement {
+	el.CheckOrder(other)
+	var op big.Int
+	otherReverse := other.Pow(op.Sub(el.order, big.NewInt(int64(2))))
+	return el.Mul(otherReverse)
 }
