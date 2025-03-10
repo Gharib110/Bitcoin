@@ -16,29 +16,40 @@ const (
 )
 
 type Point struct {
-	x, y *big.Int
-	a, b *big.Int
+	x, y *FieldElement
+	a, b *FieldElement
 }
 
-func OpOnBig(x, y *big.Int, op_type OpType) *big.Int {
-	var op big.Int
+func OpOnBig(x, y *FieldElement,
+	scalar *big.Int, op_type OpType) *FieldElement {
+
 	switch op_type {
 	case ADD:
-		return op.Add(x, y)
+		return x.Add(y)
 	case SUB:
-		return op.Sub(x, y)
+		return x.Sub(y)
 	case MUL:
-		return op.Mul(x, y)
+		if y != nil {
+			return x.Mul(y)
+		}
+		if scalar != nil {
+			return x.ScalarMul(scalar)
+		}
+		panic("error in Multiply")
 	case DIV:
-		return op.Div(x, y)
+		return x.Div(y)
 	case EXP:
-		return op.Exp(x, y, nil)
+		if scalar == nil {
+			panic("scalar should not be nil")
+		}
+
+		return x.Pow(scalar)
 	}
 
 	panic("unknown operation type")
 }
 
-func NewECPoint(x, y, a, b *big.Int) *Point {
+func NewECPoint(x, y, a, b *FieldElement) *Point {
 	if x == nil && y == nil {
 		return &Point{
 			x: x,
@@ -47,11 +58,11 @@ func NewECPoint(x, y, a, b *big.Int) *Point {
 			b: b,
 		}
 	}
-	left := OpOnBig(y, big.NewInt(int64(2)), EXP)
-	x3 := OpOnBig(x, big.NewInt(int64(3)), EXP)
-	ax := OpOnBig(a, x, MUL)
-	right := OpOnBig(OpOnBig(x3, ax, ADD), b, ADD)
-	if left.Cmp(right) != 0 {
+	left := OpOnBig(y, nil, big.NewInt(int64(2)), EXP)
+	x3 := OpOnBig(x, nil, big.NewInt(int64(3)), EXP)
+	ax := OpOnBig(a, x, nil, MUL)
+	right := OpOnBig(OpOnBig(x3, ax, nil, ADD), b, nil, ADD)
+	if left.EqualTo(right) != true {
 		err := fmt.Sprintf("Point(%v, %v) is not on the curve !")
 		panic(err)
 	}
@@ -65,7 +76,8 @@ func NewECPoint(x, y, a, b *big.Int) *Point {
 }
 
 func (p *Point) Add(other *Point) *Point {
-	if p.a.Cmp(other.a) != 0 && p.b.Cmp(other.b) != 0 {
+	if p.a.EqualTo(other.a) != true &&
+		p.b.EqualTo(other.b) != true {
 		panic("points are not on the same curve")
 	}
 
@@ -77,8 +89,9 @@ func (p *Point) Add(other *Point) *Point {
 		return p
 	}
 
-	if p.x.Cmp(other.x) == 0 &&
-		OpOnBig(p.y, other.y, ADD).Cmp(big.NewInt(int64(0))) == 0 {
+	zero := NewFieldElement(p.x.order, big.NewInt(int64(0)))
+	if p.x.EqualTo(other.x) == true &&
+		OpOnBig(p.y, other.y, nil, ADD).EqualTo(zero) == true {
 		return &Point{
 			x: nil,
 			y: nil,
@@ -87,26 +100,28 @@ func (p *Point) Add(other *Point) *Point {
 		}
 	}
 
-	var numerator *big.Int
-	var denominator *big.Int
-	if p.x.Cmp(other.x) == 0 && p.y.Cmp(other.y) == 0 {
-		xSqrt := OpOnBig(p.x, big.NewInt(int64(2)), EXP)
-		threeXSqrt := OpOnBig(xSqrt, big.NewInt(int64(3)), MUL)
-		numerator = OpOnBig(threeXSqrt, p.a, ADD)
-		denominator = OpOnBig(p.y, big.NewInt(int64(2)), MUL)
+	var numerator *FieldElement
+	var denominator *FieldElement
+	if p.x.EqualTo(other.x) == true &&
+		p.y.EqualTo(other.y) == true {
+		xSqrt := OpOnBig(p.x, nil, big.NewInt(int64(2)), EXP)
+		threeXSqrt := OpOnBig(xSqrt, nil, big.NewInt(int64(3)), MUL)
+		numerator = OpOnBig(threeXSqrt, p.a, nil, ADD)
+		denominator = OpOnBig(p.y, nil, big.NewInt(int64(2)), MUL)
 	} else {
-		numerator = OpOnBig(other.y, p.y, SUB)
-		denominator = OpOnBig(other.x, p.x, SUB)
+		numerator = OpOnBig(other.y, p.y, nil, SUB)
+		denominator = OpOnBig(other.x, p.x, nil, SUB)
 	}
 
-	slope := OpOnBig(numerator, denominator, DIV)
+	slope := OpOnBig(numerator, denominator, nil, DIV)
 
-	slopeSqrt := OpOnBig(slope, big.NewInt(int64(2)), EXP)
-	x3 := OpOnBig(OpOnBig(slopeSqrt, p.x, SUB), other.x, SUB)
-	x3MinusX1 := OpOnBig(x3, p.x, SUB)
+	slopeSqrt := OpOnBig(slope, nil, big.NewInt(int64(2)), EXP)
+	x3 := OpOnBig(OpOnBig(slopeSqrt, p.x, nil, SUB), other.x, nil, SUB)
+	x3MinusX1 := OpOnBig(x3, p.x, nil, SUB)
 
-	y3 := OpOnBig(OpOnBig(slope, x3MinusX1, MUL), p.y, ADD)
-	minusY3 := OpOnBig(y3, big.NewInt(int64(-1)), MUL)
+	y3 := OpOnBig(OpOnBig(slope, x3MinusX1, nil, MUL),
+		p.y, nil, ADD)
+	minusY3 := OpOnBig(y3, nil, big.NewInt(int64(-1)), MUL)
 
 	return &Point{
 		x: x3,
@@ -117,13 +132,23 @@ func (p *Point) Add(other *Point) *Point {
 }
 
 func (p *Point) String() string {
+	xString := "nil"
+	yString := "nil"
+	if p.x != nil {
+		xString = p.x.String()
+	}
+
+	if p.y != nil {
+		yString = p.y.String()
+	}
 	return fmt.Sprintf("(X: %v, y: %v, a: %v, b: %v)",
-		p.x.String(), p.y.String(), p.a.String(), p.b.String())
+		xString, yString, p.a.String(), p.b.String())
 }
 
 func (p *Point) Equal(other *Point) bool {
-	if p.a.Cmp(other.a) == 0 && p.b.Cmp(other.b) == 0 &&
-		p.y.Cmp(other.y) == 0 && p.x.Cmp(other.x) == 0 {
+
+	if p.a.EqualTo(other.a) == true && p.b.EqualTo(other.b) == true &&
+		p.y.EqualTo(other.y) == true && p.x.EqualTo(other.x) == true {
 		return true
 	}
 
@@ -131,8 +156,8 @@ func (p *Point) Equal(other *Point) bool {
 }
 
 func (p *Point) NotEqual(other *Point) bool {
-	if p.a.Cmp(other.a) != 0 || p.b.Cmp(other.b) != 0 ||
-		p.y.Cmp(other.y) != 0 || p.x.Cmp(other.x) != 0 {
+	if p.a.EqualTo(other.a) != true || p.b.EqualTo(other.b) != true ||
+		p.y.EqualTo(other.y) != true || p.x.EqualTo(other.x) != true {
 		return true
 	}
 
