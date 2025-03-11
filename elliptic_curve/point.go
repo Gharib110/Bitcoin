@@ -203,25 +203,12 @@ func S256Point(x *big.Int, y *big.Int) *Point {
 	}
 }
 
-func (p *Point) getGenerator() *Point {
-	Gx := new(big.Int)
-	Gy := new(big.Int)
-	Gx.SetString(
-		"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-		16)
-	Gy.SetString(
-		"483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
-		16)
-	G := S256Point(Gx, Gy)
-	return G
-}
-
 // Verify any one who wants to verify message z which is created by owner of e
 func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
 	sInverse := sig.s.Inverse()
 	u := z.Mul(sInverse)
 	v := sig.r.Mul(sInverse)
-	G := p.getGenerator()
+	G := GetGenerator()
 	total := (G.ScalarMul(u.num)).Add(p.ScalarMul(v.num))
 	return total.x.num.Cmp(sig.r.num) == 0
 }
