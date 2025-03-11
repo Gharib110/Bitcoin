@@ -11,6 +11,20 @@ type FieldElement struct {
 	num   *big.Int
 }
 
+// S256Field Construct a FieldElement of s^256 - 2^32 - 977
+func S256Field(num *big.Int) *FieldElement {
+	var op big.Int
+	twoExp256 := op.Exp(big.NewInt(int64(2)), big.NewInt(int64(256)), nil)
+	var op1 big.Int
+	twoExp32 := op1.Exp(big.NewInt(int64(3)), big.NewInt(int64(32)), nil)
+	var op2 big.Int
+	p := op2.Sub(twoExp256, twoExp32)
+	var op3 big.Int
+	pp := op3.Sub(p, big.NewInt(int64(977)))
+
+	return NewFieldElement(pp, num)
+}
+
 func NewFieldElement(order *big.Int, num *big.Int) *FieldElement {
 	if order.Cmp(num) == -1 {
 		err := fmt.Sprintf("num %s is greater than order %s",
@@ -64,12 +78,14 @@ func (el *FieldElement) Mul(other *FieldElement) *FieldElement {
 	return NewFieldElement(el.order, op.Mod(mul, el.order))
 }
 
+// Pow Arithmetic power over modular of the order
+// Pow k ^ (p - 1) % p = 1, power > p - 1 => power % (p - 1)
 func (el *FieldElement) Pow(pow *big.Int) *FieldElement {
 	var op big.Int
 	t := op.Mod(pow, op.Sub(el.order, big.NewInt(int64(1))))
-	powRes := op.Exp(el.num, t, nil)
-	modRes := op.Mod(powRes, el.order)
-	return NewFieldElement(el.order, modRes)
+	powRes := op.Exp(el.num, t, el.order)
+	//modRes := op.Mod(powRes, el.order)
+	return NewFieldElement(el.order, powRes)
 }
 
 func (el *FieldElement) ScalarMul(r *big.Int) *FieldElement {

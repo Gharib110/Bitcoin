@@ -75,6 +75,24 @@ func NewECPoint(x, y, a, b *FieldElement) *Point {
 	}
 }
 
+func (p *Point) ScalarMul(scalar *big.Int) *Point {
+	if scalar == nil {
+		panic("scalar should not be nil")
+	}
+
+	current := p
+	binaryForm := fmt.Sprintf("%b", scalar)
+	result := NewECPoint(nil, nil, p.a, p.b)
+	for i := len(binaryForm) - 1; i >= 0; i-- {
+		if binaryForm[i] == '1' {
+			result = result.Add(current)
+		}
+		current = current.Add(current)
+	}
+
+	return result
+}
+
 func (p *Point) Add(other *Point) *Point {
 	if p.a.EqualTo(other.a) != true &&
 		p.b.EqualTo(other.b) != true {
