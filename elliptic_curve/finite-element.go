@@ -101,3 +101,8 @@ func (el *FieldElement) Div(other *FieldElement) *FieldElement {
 	otherReverse := other.Pow(op.Sub(el.order, big.NewInt(int64(2))))
 	return el.Mul(otherReverse)
 }
+
+func (el *FieldElement) Inverse() *FieldElement {
+	var op big.Int
+	return el.Pow(op.Sub(el.order, big.NewInt(int64(2))))
+}
