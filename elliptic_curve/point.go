@@ -181,3 +181,24 @@ func (p *Point) NotEqual(other *Point) bool {
 
 	return false
 }
+
+// S256Point default setting
+func S256Point(x *big.Int, y *big.Int) *Point {
+	a := S256Field(big.NewInt(int64(0)))
+	b := S256Field(big.NewInt(int64(7)))
+	if x == nil && y == nil {
+		return &Point{
+			x: nil,
+			y: nil,
+			a: a,
+			b: b,
+		}
+	}
+
+	return &Point{
+		x: S256Field(x),
+		y: S256Field(y),
+		a: a,
+		b: b,
+	}
+}
