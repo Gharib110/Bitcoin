@@ -2,6 +2,7 @@ package elliptic_curve
 
 import (
 	"crypto/sha256"
+	"golang.org/x/crypto/ripemd160"
 	"math/big"
 )
 
@@ -100,4 +101,18 @@ func EncodeBase58(s []byte) string {
 	}
 
 	return prefix + result
+}
+
+func Base58Checksum(s []byte) string {
+	hash256 := Hash256(EncodeBase58(s))
+	return EncodeBase58(append(s, hash256[:4]...))
+}
+
+func Hash160(s []byte) []byte {
+	sha256C := sha256.Sum256(s)
+	hasher := ripemd160.New()
+	hasher.Write(sha256C[:])
+	hashBytes := hasher.Sum(nil)
+
+	return hashBytes
 }
