@@ -106,3 +106,18 @@ func (el *FieldElement) Inverse() *FieldElement {
 	var op big.Int
 	return el.Pow(op.Sub(el.order, big.NewInt(int64(2))))
 }
+
+func (el *FieldElement) Sqrt() *FieldElement {
+	// (p+1) % 4 == 0
+	var opAdd big.Int
+	orderAddOne := opAdd.Add(el.order, big.NewInt(int64(1)))
+
+	var opMod big.Int
+	modRes := opMod.Mod(orderAddOne, big.NewInt(int64(4)))
+	if modRes.Cmp(big.NewInt(int64(0))) != 0 {
+		panic("order plus one mod 4 is not 0")
+	}
+
+	var opDiv big.Int
+	return el.Pow(opDiv.Div(orderAddOne, big.NewInt(int64(4))))
+}

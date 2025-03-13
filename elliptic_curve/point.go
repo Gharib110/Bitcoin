@@ -213,7 +213,19 @@ func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
 	return total.x.num.Cmp(sig.r.num) == 0
 }
 
-// Sec uncompressed encoding
-func (p *Point) Sec() string {
-	return fmt.Sprintf("04%064x%064x", p.x.num, p.y.num)
+// Sec uncompressed and compressed encoding
+func (p *Point) Sec(compressed bool) string {
+	if !compressed {
+		return fmt.Sprintf("04%064x%064x", p.x.num, p.y.num)
+	}
+
+	// y is even or odd for the first byte ?
+	var opMod big.Int
+	if opMod.Mod(p.y.num,
+		big.NewInt(int64(2))).Cmp(big.NewInt(0)) == 0 {
+		// y is even set first byte to 02
+		return fmt.Sprintf("02%064x", p.x.num)
+	} else {
+		return fmt.Sprintf("03%064x", p.x.num)
+	}
 }
