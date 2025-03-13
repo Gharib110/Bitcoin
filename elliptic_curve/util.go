@@ -2,9 +2,62 @@ package elliptic_curve
 
 import (
 	"crypto/sha256"
+	"github.com/tsuna/endian"
 	"golang.org/x/crypto/ripemd160"
 	"math/big"
 )
+
+type LittleEndianLength int
+
+const (
+	LittleEndian2Bytes = iota
+	LittleEndian4Bytes
+	LittleEndian8Bytes
+)
+
+func LittleEndianToBigInt(data []byte, length LittleEndianLength) *big.Int {
+	switch length {
+	case LittleEndian2Bytes:
+		p := new(big.Int)
+		p.SetBytes(data)
+		val := endian.NetToHostUint16(uint16(p.Uint64()))
+		return big.NewInt(int64(val))
+	case LittleEndian4Bytes:
+		p := new(big.Int)
+		p.SetBytes(data)
+		val := endian.NetToHostUint32(uint32(p.Uint64()))
+		return big.NewInt(int64(val))
+	case LittleEndian8Bytes:
+		p := new(big.Int)
+		p.SetBytes(data)
+		val := endian.NetToHostUint64(p.Uint64())
+		return big.NewInt(int64(val))
+	}
+
+	return nil
+}
+
+func BigIntToLittleEndian(v *big.Int, length LittleEndianLength) []byte {
+	switch length {
+	case LittleEndian2Bytes:
+		val := v.Int64()
+		littleEndianVal := endian.HostToNetUint16(uint16(val))
+		p := big.NewInt(int64(littleEndianVal))
+		return p.Bytes()
+	case LittleEndian4Bytes:
+		val := v.Int64()
+		littleEndianVal := endian.HostToNetUint32(uint32(val))
+		p := big.NewInt(int64(littleEndianVal))
+		return p.Bytes()
+	case LittleEndian8Bytes:
+		val := v.Int64()
+		littleEndianVal := endian.HostToNetUint64(uint64(val))
+		p := big.NewInt(int64(littleEndianVal))
+		return p.Bytes()
+	}
+
+	return nil
+}
 
 // Hash256  z, sha256(sha256(create a text0) -> 256bits integer -> 32bytes integer
 func Hash256(text string) []byte {
