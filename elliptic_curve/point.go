@@ -107,7 +107,7 @@ func NewECPoint(x *FieldElement, y *FieldElement, a *FieldElement, b *FieldEleme
 	x3 := OpOnBig(x, nil, big.NewInt(int64(3)), EXP)
 	ax := OpOnBig(a, x, nil, MUL)
 	right := OpOnBig(OpOnBig(x3, ax, nil, ADD), b, nil, ADD)
-	//if x and y are nil, then its identity point and
+	//if x and y are nil, then its identity point, and
 	//we don't need to check it on curve
 	if left.EqualTo(right) != true {
 		err := fmt.Sprintf("point:(%v, %v) is not on the curve with a: %v, b:%v\n", x, y, a, b)
@@ -185,7 +185,7 @@ func (p *Point) Add(other *Point) *Point {
 		xSqrt := OpOnBig(p.x, nil, big.NewInt(int64(2)), EXP)
 		threeXSqrt := OpOnBig(xSqrt, nil, big.NewInt(int64(3)), MUL)
 		numerator = OpOnBig(threeXSqrt, p.a, nil, ADD)
-		//demoninator is 2y
+		//denominator is 2y
 		denominator = OpOnBig(p.y, nil, big.NewInt(int64(2)), MUL)
 	} else {
 		//s = (y2-y2)/(x2-x1)

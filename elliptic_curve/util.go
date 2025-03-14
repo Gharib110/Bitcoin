@@ -1,11 +1,12 @@
 package elliptic_curve
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"github.com/tsuna/endian"
-	"math/big"
-
 	"golang.org/x/crypto/ripemd160"
+	"math/big"
 )
 
 type LittleEndianLength int
@@ -169,4 +170,58 @@ func Hash160(s []byte) []byte {
 	hashBytes := hasher.Sum(nil)
 
 	return hashBytes
+}
+
+func ParseSigBin(sigBin []byte) *Signature {
+	reader := bytes.NewReader(sigBin)
+	bufReader := bufio.NewReader(reader)
+	//first byte should be 0x30
+	firstByte := make([]byte, 1)
+	bufReader.Read(firstByte)
+	if firstByte[0] != 0x30 {
+		panic("Bad Signature, first byte is not 0x30")
+	}
+	//second byte is the length of r and s
+	lenBuf := make([]byte, 1)
+	bufReader.Read(lenBuf)
+	//first two byte with the length of r and s should be the total length of sigBin
+	if lenBuf[0]+2 != byte(len(sigBin)) {
+		panic("Bad Signature length")
+	}
+
+	//marker 0x02 as the beginning of r
+	marker := make([]byte, 1)
+	bufReader.Read(marker)
+	if marker[0] != 0x02 {
+		panic("signature marker for r is not 0x02")
+	}
+	//following is the length of r bin
+	lenBuf = make([]byte, 1)
+	bufReader.Read(lenBuf)
+	rLength := lenBuf[0]
+	rBin := make([]byte, rLength)
+	//it may have 0x00 append at the head, but it does not affect the value of r
+	bufReader.Read(rBin)
+	r := new(big.Int)
+	r.SetBytes(rBin)
+	//marketer 0x02 for the beginning of s
+	marker = make([]byte, 1)
+	bufReader.Read(marker)
+	if marker[0] != 0x02 {
+		panic("signature marker for s is not 0x02")
+	}
+	//following is length of s bin
+	lenBuf = make([]byte, 1)
+	bufReader.Read(lenBuf)
+	sLength := lenBuf[0]
+	sBin := make([]byte, sLength)
+	bufReader.Read(sBin)
+	s := new(big.Int)
+	s.SetBytes(sBin)
+	if len(sigBin) != int(6+rLength+sLength) {
+		panic("signature wrong length")
+	}
+
+	n := GetBitCoinValueN()
+	return NewSignature(NewFieldElement(n, r), NewFieldElement(n, s))
 }
