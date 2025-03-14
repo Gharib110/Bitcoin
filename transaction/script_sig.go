@@ -6,7 +6,7 @@ import (
 )
 
 type ScriptSig struct {
-	cmds          [][]byte
+	commands      [][]byte
 	bitcoinOpCode *BitcoinOpCode
 }
 
@@ -18,9 +18,9 @@ const (
 	OpPushData2           = 77
 )
 
-func InitScriptSig(cmds [][]byte) *ScriptSig {
+func InitScriptSig(commands [][]byte) *ScriptSig {
 	bitcoinOpCode := NewBitcoinOpCode()
-	bitcoinOpCode.commands = cmds
+	bitcoinOpCode.commands = commands
 	return &ScriptSig{
 		bitcoinOpCode: bitcoinOpCode,
 	}
@@ -99,7 +99,7 @@ func (s *ScriptSig) Evaluate(z []byte) bool {
 	/*
 		After running all the operations in the scripts and the stack is empty,
 		then evaluation fail, otherwise we check the top element of the stack,
-		if it value is 0, then fail, if the value is not 0, then success
+		if its value is 0, then fail, if the value is not 0, then success
 	*/
 	if len(s.bitcoinOpCode.stack) == 0 {
 		return false
@@ -112,10 +112,10 @@ func (s *ScriptSig) Evaluate(z []byte) bool {
 }
 
 func (s *ScriptSig) rawSerialize() []byte {
-	result := []byte{}
+	var result []byte
 	for _, cmd := range s.bitcoinOpCode.commands {
 		if len(cmd) == 1 {
-			//only one byte means its an instruction
+			//only one byte means it's an instruction
 			result = append(result, cmd...)
 		} else {
 			length := len(cmd)
@@ -150,7 +150,7 @@ func (s *ScriptSig) rawSerialize() []byte {
 func (s *ScriptSig) Serialize() []byte {
 	rawResult := s.rawSerialize()
 	total := len(rawResult)
-	result := []byte{}
+	var result []byte
 	//encode the total length of script at the head
 	result = append(result, EncodeVariant(big.NewInt(int64(total)))...)
 	result = append(result, rawResult...)
@@ -158,8 +158,8 @@ func (s *ScriptSig) Serialize() []byte {
 }
 
 func (s *ScriptSig) Add(script *ScriptSig) *ScriptSig {
-	cmds := make([][]byte, 0)
-	cmds = append(cmds, s.bitcoinOpCode.commands...)
-	cmds = append(cmds, script.bitcoinOpCode.commands...)
-	return InitScriptSig(cmds)
+	commands := make([][]byte, 0)
+	commands = append(commands, s.bitcoinOpCode.commands...)
+	commands = append(commands, script.bitcoinOpCode.commands...)
+	return InitScriptSig(commands)
 }

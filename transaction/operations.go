@@ -304,7 +304,7 @@ func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 		push 0 on the stack
 
 		if the script is using uncompressed sec format for public key
-		then script is called p2pk (pay to public key)
+		then script is called P2PK (pay to public key)
 	*/
 	if len(b.stack) < 2 {
 		return false
