@@ -84,3 +84,23 @@ func (t *Transaction) GetScript(idx int, testnet bool) *ScriptSig {
 	txInput := t.txInputs[idx]
 	return txInput.Script(testnet)
 }
+
+func (t *Transaction) Fee() *big.Int {
+	//amount of input - amount of output > 0
+	inputSum := big.NewInt(int64(0))
+	outputSum := big.NewInt(int64(0))
+
+	for i := 0; i < len(t.txInputs); i++ {
+		addOp := new(big.Int)
+		value := t.txInputs[i].Value(t.testnet)
+		inputSum = addOp.Add(inputSum, value)
+	}
+
+	for i := 0; i < len(t.txOutputs); i++ {
+		addOp := new(big.Int)
+		outputSum = addOp.Add(outputSum, t.txOutputs[i].amount)
+	}
+
+	opsub := new(big.Int)
+	return opsub.Sub(inputSum, outputSum)
+}
