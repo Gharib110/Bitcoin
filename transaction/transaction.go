@@ -101,6 +101,6 @@ func (t *Transaction) Fee() *big.Int {
 		outputSum = addOp.Add(outputSum, t.txOutputs[i].amount)
 	}
 
-	opsub := new(big.Int)
-	return opsub.Sub(inputSum, outputSum)
+	opSub := new(big.Int)
+	return opSub.Sub(inputSum, outputSum)
 }
