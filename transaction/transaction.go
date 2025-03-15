@@ -123,11 +123,13 @@ func (t *Transaction) VerifyInput(inputIndex int) bool {
 	return verifyScript.Evaluate(z)
 }
 
+/*
+Verify
+ 1. verify fee
+ 2. verify each transaction input
+*/
 func (t *Transaction) Verify() bool {
-	/*
-		1. verify fee
-		2. verify each transaction input
-	*/
+
 	if t.Fee().Cmp(big.NewInt(int64(0))) < 0 {
 		return false
 	}

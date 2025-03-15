@@ -124,7 +124,6 @@ func (b *Block) String() string {
 }
 
 /*
-
 bits in the field of version used to indicate which protocol the current miner can support
 BIP0009, BIP0091, BIP0141
 */

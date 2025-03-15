@@ -269,3 +269,71 @@ therefore the equation above is equivalent to:
 And notice that if we reverse the byte order of 18 01 3c e9,
 then we get e9 3c 01 18 this is exactly the value of bits field in our
 block header.
+
+## P2P Networking
+One of the great creativity of bitcoin blockchain is it is a distributing system.
+Thousands of independent nodes can work together just like an
+integrated system, and even different nodes may be far away from each other, 
+the system can still guarantee no any one can sabotage the whole
+system, and the nodes in the system can make sure their data can synchronize with each other and make sure of the data integrity.
+
+
+All these achievements are thanks to the bitcoin network protocol,
+we will dive deep into the bitcoin networking protocol and make clear how
+such magic is happening.
+Following is an example of bitcoin networking package raw data:
+
+```ggg
+f9beb4d976657273696f6e0000000000650000005f1a69d2721101000100000000000000bc8f5e5400000000010000000000000000000000000000000000ffffc61b6409208d010000000000000000000000000000000000ffffcb0071c0208d128035cbc97953f80f2f5361746f7368693a302e392e332fcf05050001
+```
+Let's dissect it into fields:
+
+1. the first 4 bytes are always the same and referred to as network magic number: ``f9beb4d9``,
+   its usage is to tell receiver that, when you see
+these four bytes appear together, then you should know this is the beginning for bitcoin networking package.
+   And this number used to
+differentiate the main-net with testnet, for testnet, the four bytes are 0b110907.
+
+2. the following 12 bytes are called command: ``76657273696f6e0000000000``,
+   it used to describe the purpose of this packet.
+   It can be human-readable string.
+
+3. the following 4 bytes: ``65000000`` it is a payload length in little endian format,
+
+4. the following 4 bytes: ``5f1a69d2`` is the first 4 bytes of hash256 of the payload.
+
+5. the following bytes are data of the payload
+
+
+We can use the channel to send more requests to
+the peer to ask more data.
+The most request data is requesting block header info from a full node.
+When you have block headers, then you can
+request the block body from multiple peers or do many useful works by those headers.
+
+
+As we have seen the version command before,
+the command for getting block headers has name ``getheaders`` and following is raw binary data for
+payload of ``getheaders`` command:
+
+```ggg
+7f11010001a35bd0ca2f4a88c4eda6d213e2378a5758dfcd6af437120000000000000000000000000000000000000000000000000000000000000000000000000000000000
+```
+
+Let's dissect the above data chunk into fields as following:
+
+1. the first four bytes is protocol version as we have seen before: 7f110100
+
+2. the following bytes are variant used to indicate the amount of hash, here the value is 01 which is only one byte
+
+3. the following bytes are the starting block hash we want to request:
+
+``a35bd0ca2f4a88c4eda6d213e2378a5758dfcd6af43712000000000000000000``
+
+4. the following bytes are the ending block hash we want to request:
+
+``0000000000000000000000000000000000000000000000000000000000000000``
+
+All zeros here mean we want to get as block headers as many as possible, but the maximum number we can get is 2000,
+which is almost a difficulty adjustment period (2016 blocks).
+

@@ -125,7 +125,7 @@ func (t *TransactionInput) isP2sh(script *ScriptSig) bool {
 
 func (t *TransactionInput) ReplaceWithScriptPubKey(testnet bool) {
 	/*
-		if it is a P2SH transaction, we use the redeem script to replace the
+		if it is a P2SH transaction, we use a redeem script to replace the
 		scriptSig of the current input
 	*/
 	script := t.scriptPubKey(testnet)
