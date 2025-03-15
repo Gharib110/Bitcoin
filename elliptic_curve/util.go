@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"math/big"
 
+	"strings"
+
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -28,7 +30,7 @@ func GetGenerator() *Point {
 	return G
 }
 
-func GetBitCoinValueN() *big.Int {
+func GetBitcoinValueN() *big.Int {
 	n := new(big.Int)
 	n.SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 	return n
@@ -67,6 +69,30 @@ func ParseSEC(secBin []byte) *Point {
 	} else {
 		return S256Point(x, yOdd.num)
 	}
+}
+
+func DecodeBase58(s string) []byte {
+	Base58Alphabet := "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+	num := big.NewInt(int64(0))
+	for _, char := range s {
+		mulOp := new(big.Int)
+		num = mulOp.Mul(num, big.NewInt(int64(58)))
+		idx := strings.Index(Base58Alphabet, string(char))
+		if idx == -1 {
+			panic("can't find char in base58 alphabet")
+		}
+		addOp := new(big.Int)
+		num = addOp.Add(num, big.NewInt(int64(idx)))
+	}
+	combined := num.Bytes()
+	checksum := combined[len(combined)-4:]
+	h256 := Hash256(string(combined[0 : len(combined)-4]))
+	if bytes.Equal(h256[0:4], checksum) != true {
+		panic("decode base58 checksum error")
+	}
+
+	//first byte is network prefix
+	return combined[1 : len(combined)-4]
 }
 
 /*
@@ -166,6 +192,6 @@ func ParseSigBin(sigBin []byte) *Signature {
 		panic("signature wrong length")
 	}
 
-	n := GetBitCoinValueN()
+	n := GetBitcoinValueN()
 	return NewSignature(NewFieldElement(n, r), NewFieldElement(n, s))
 }

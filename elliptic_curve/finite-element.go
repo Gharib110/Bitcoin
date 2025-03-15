@@ -10,7 +10,7 @@ type FieldElement struct {
 	num   *big.Int //value of the given element in the field
 }
 
-// overflow 64bits integer
+// overflow 64-bits integer
 //huge number ,  +, *, ^ => overflow 64bits, we use large or big number
 //
 
@@ -60,14 +60,14 @@ func (f *FieldElement) checkOrder(other *FieldElement) {
 func (f *FieldElement) Add(other *FieldElement) *FieldElement {
 	f.checkOrder(other)
 
-	//remember the modular
+	//remember the modulur
 	var op big.Int
 	return NewFieldElement(f.order, op.Mod(op.Add(f.num, other.num), f.order))
 }
 
 /*
 Negate
-a ,b (a + b) % order = 0, b is called negate of a, b = -a
+a, b (a + b) % order = 0, b is called negate of a, b = -a
 */
 func (f *FieldElement) Negate() *FieldElement {
 	/*
@@ -77,9 +77,9 @@ func (f *FieldElement) Negate() *FieldElement {
 	return NewFieldElement(f.order, op.Sub(f.order, f.num))
 }
 
-func (f *FieldElement) Sub(other *FieldElement) *FieldElement {
+func (f *FieldElement) Subtract(other *FieldElement) *FieldElement {
 	/*
-		a, b element of the finite set,  c = a - b, given b how can we find c,
+		a b elements of the finite set, c = a - b, given b how can we find c,
 		(b + c) % order = a, a - b => (a + (-b) ) % order
 	*/
 
@@ -89,7 +89,7 @@ func (f *FieldElement) Sub(other *FieldElement) *FieldElement {
 func (f *FieldElement) Mul(other *FieldElement) *FieldElement {
 	f.checkOrder(other)
 
-	//Arithmetic multiply over modulur of the order
+	//Arithmetic multiplies over modulur of the order
 	var op big.Int
 	mul := op.Mul(f.num, other.num)
 	return NewFieldElement(f.order, op.Mod(mul, f.order))

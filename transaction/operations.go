@@ -130,7 +130,7 @@ type BitcoinOpCode struct {
 	commands    [][]byte
 }
 
-func NewBicoinOpCode() *BitcoinOpCode {
+func NewBitCoinOpCode() *BitcoinOpCode {
 	opCodeNames := map[int]string{
 		0:   "OP_0",
 		76:  "OP_PUSHDATA1",
@@ -293,19 +293,18 @@ func (b *BitcoinOpCode) opEqualVerify() bool {
 
 func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 	/*
-			OP_CHECKSIG verify the validity of the message z,
-			DER binary data of the signature and the uncompressed sec public key
-			are top two elements of the stack
+		OP_CHECKSIG verify the validity of the message z,
+		DER binary data of the signature and the uncompressed sec public key
+		are top two elements of the stack
 
-			notice!!
-		    we need to remove the last byte of the DER binary data because
-			this byte is used for a hash type.
+		notice!! we need to remove the last byte of the der binary data because
+		this byte is used for a hash type
 
-			if the signature verification success, push 1 on the stack, otherwise
-			push 0 on the stack.
+		if the signature verification success, push 1 on the stack, otherwise
+		push 0 on the stack
 
-			if the script is using uncompressed sec format for a public key,
-			then a script is called P2PK (pay for a public key).
+		if the script is using uncompressed sec format for a public key,
+		then a script is called P2PK (pay for a public key)
 	*/
 	if len(b.stack) < 2 {
 		return false
@@ -321,7 +320,7 @@ func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 
 	z := new(big.Int)
 	z.SetBytes(zBin)
-	n := ecc.GetBitCoinValueN()
+	n := ecc.GetBitcoinValueN()
 	zField := ecc.NewFieldElement(n, z)
 	if point.Verify(zField, sig) == true {
 		b.stack = append(b.stack, b.EncodeNum(1))
@@ -385,7 +384,7 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 	for absNum > 0 {
 		/*
 					append the last byte of asbNum into a result,
-			a notice result will be little endian byte array of absNum
+			        a notice result will be little endian byte array of absNum
 		*/
 		result = append(result, byte(absNum&0xff))
 		absNum >>= 8
@@ -393,7 +392,7 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 
 	/*
 		check the most significant bit, notice the most significant byte is
-		at the end of result
+		at the end of rust
 		0x8080 -> 32896-32896
 	*/
 	if (result[len(result)-1] & 0x80) != 0 {

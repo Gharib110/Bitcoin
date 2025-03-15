@@ -14,6 +14,28 @@ type TransactionInput struct {
 	fetcher                  *TransactionFetcher
 }
 
+func InitTransactionInput(previousTx []byte, previousIndex *big.Int) *TransactionInput {
+	return &TransactionInput{
+		previousTransactionID:    previousTx,
+		previousTransactionIndex: previousIndex,
+		scriptSig:                nil,
+		sequence:                 big.NewInt(int64(0xffffffff)),
+	}
+}
+
+func (t *TransactionInput) String() string {
+	return fmt.Sprintf("previous transaction: %x\n previous tx index:%x\n",
+		t.previousTransactionID, t.previousTransactionIndex)
+}
+
+func (t *TransactionInput) SetScriptSig(script *ScriptSig) {
+	t.scriptSig = script
+}
+
+func (t *TransactionInput) SetString(sig *ScriptSig) {
+	t.scriptSig = sig
+}
+
 func reverseByteSlice(bytes []byte) []byte {
 	reverseBytes := []byte{}
 	for i := len(bytes) - 1; i >= 0; i-- {
@@ -24,7 +46,7 @@ func reverseByteSlice(bytes []byte) []byte {
 }
 
 func NewTractionInput(reader *bufio.Reader) *TransactionInput {
-	//first 32 bytes are hash256 of previous transaction
+	//the first 32 bytes are hash256 of previous transaction
 	transactionInput := &TransactionInput{}
 	transactionInput.fetcher = NewTransactionFetch()
 
@@ -33,18 +55,15 @@ func NewTractionInput(reader *bufio.Reader) *TransactionInput {
 	//convert it from little endian to big endian
 	//reverse the byte array [0x01, 0x02, 0x03, 0x04] -> [0x04, 0x03, 0x02, 0x01]
 	transactionInput.previousTransactionID = reverseByteSlice(previousTransaction)
-	fmt.Printf("previous transaction id:%x\n", transactionInput.previousTransactionID)
+
 	//4 bytes for previous transaction index
 	idx := make([]byte, 4)
 	reader.Read(idx)
 	transactionInput.previousTransactionIndex = LittleEndianToBigInt(idx, LittleEndian4Bytes)
-	fmt.Printf("previous transaction index:%x\n", transactionInput.previousTransactionIndex)
 
 	transactionInput.scriptSig = NewScriptSig(reader)
-	scriptBuf := transactionInput.scriptSig.Serialize()
-	fmt.Printf("script byte:%x\n", scriptBuf)
 
-	//last four bytes for sequence
+	//last four bytes for a sequence
 	seqBytes := make([]byte, 4)
 	reader.Read(seqBytes)
 	transactionInput.sequence = LittleEndianToBigInt(seqBytes, LittleEndian4Bytes)
@@ -81,7 +100,7 @@ func (t *TransactionInput) scriptPubKey(testnet bool) *ScriptSig {
 
 func (t *TransactionInput) ReplaceWithScriptPubKey(testnet bool) {
 	t.scriptSig = t.scriptPubKey(testnet)
-	fmt.Printf("scriptpubkey: %x\n", t.scriptSig)
+	fmt.Printf("scriptpubkey: %v\n", t.scriptSig)
 }
 
 func (t *TransactionInput) Serialize() []byte {

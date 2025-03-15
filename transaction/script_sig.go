@@ -19,7 +19,7 @@ const (
 )
 
 func InitScriptSig(commands [][]byte) *ScriptSig {
-	bitcoinOpCode := NewBicoinOpCode()
+	bitcoinOpCode := NewBitCoinOpCode()
 	bitcoinOpCode.commands = commands
 	return &ScriptSig{
 		bitcoinOpCode: bitcoinOpCode,
@@ -27,7 +27,7 @@ func InitScriptSig(commands [][]byte) *ScriptSig {
 }
 
 func NewScriptSig(reader *bufio.Reader) *ScriptSig {
-	var commands [][]byte
+	commands := [][]byte{}
 	/*
 		In the beginning is the total length for script field
 	*/
@@ -68,7 +68,7 @@ func NewScriptSig(reader *bufio.Reader) *ScriptSig {
 			data := make([]byte, length.Int64())
 			reader.Read(data)
 			commands = append(commands, data)
-			count += 2 + length.Int64()
+			count += int64(2 + length.Int64())
 		} else {
 			//is data processing instruction
 			commands = append(commands, []byte{currentByte})
@@ -112,10 +112,10 @@ func (s *ScriptSig) Evaluate(z []byte) bool {
 }
 
 func (s *ScriptSig) rawSerialize() []byte {
-	var result []byte
+	result := []byte{}
 	for _, cmd := range s.bitcoinOpCode.commands {
 		if len(cmd) == 1 {
-			//only one byte means it's an instruction
+			//only one byte means it is an instruction
 			result = append(result, cmd...)
 		} else {
 			length := len(cmd)
@@ -130,7 +130,7 @@ func (s *ScriptSig) rawSerialize() []byte {
 			} else if length >= 0x100 && length <= 520 {
 				/*
 					this is OP_PUSHDATA2 command, we push the command
-					and then two bytes for the data length but in little endian format
+					and then two byte for the data length but in little endian format
 				*/
 				result = append(result, OP_PUSHDATA2)
 				lenBuf := BigIntToLittleEndian(big.NewInt(int64(length)), LittleEndian2Bytes)
@@ -150,7 +150,7 @@ func (s *ScriptSig) rawSerialize() []byte {
 func (s *ScriptSig) Serialize() []byte {
 	rawResult := s.rawSerialize()
 	total := len(rawResult)
-	var result []byte
+	result := []byte{}
 	//encode the total length of a script at the head
 	result = append(result, EncodeVariant(big.NewInt(int64(total)))...)
 	result = append(result, rawResult...)

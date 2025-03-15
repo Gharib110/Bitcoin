@@ -20,6 +20,34 @@ type Transaction struct {
 	testnet   bool
 }
 
+func InitTransaction(version *big.Int, txInputs []*TransactionInput, txOutputs []*TransactionOutput,
+	lockTime *big.Int, testnet bool) *Transaction {
+	return &Transaction{
+		version:   version,
+		txInputs:  txInputs,
+		txOutputs: txOutputs,
+		lockTime:  lockTime,
+		testnet:   testnet,
+	}
+}
+
+func (t *Transaction) String() string {
+	txIns := ""
+	for i := 0; i < len(t.txInputs); i++ {
+		txIns += t.txInputs[i].String()
+		txIns += "\n"
+	}
+
+	txOuts := ""
+	for i := 0; i < len(t.txOutputs); i++ {
+		txOuts += t.txOutputs[i].String()
+		txOuts += "\n"
+	}
+
+	return fmt.Sprintf("tx version: %x\n transaction inputs: %s\n transaction outputs:%s\n locktime:%x\n",
+		t.version, txIns, txOuts, t.lockTime)
+}
+
 func getInputCount(bufReader *bufio.Reader) *big.Int {
 	/*
 		if the first byte of input is 0, then witness transaction,
@@ -43,10 +71,10 @@ func getInputCount(bufReader *bufio.Reader) *big.Int {
 	return count
 }
 
-func (t *Transaction) SignHash(inputIdx int) []byte {
+func (t *Transaction) SerializeWithSign(inputIdx int) []byte {
 	/*
 		construct a signature message for the given input indicate by inputIdx,
-		we need to change the given scriptSig with the scriptPubKey from the
+		we need to change the given scripts with the scriptPubKey from the
 		output of the previous transaction, and then do hash256 on the binary transaction
 		data
 	*/
@@ -78,6 +106,11 @@ func (t *Transaction) SignHash(inputIdx int) []byte {
 	signBinary = append(signBinary,
 		BigIntToLittleEndian(big.NewInt(int64(SIGHASH_ALL)), LittleEndian4Bytes)...)
 
+	return signBinary
+}
+
+func (t *Transaction) SignHash(inputIdx int) []byte {
+	signBinary := t.SerializeWithSign(inputIdx)
 	h256 := ecc.Hash256(string(signBinary))
 	return h256
 }
@@ -119,7 +152,7 @@ func ParseTransaction(binary []byte) *Transaction {
 	transaction.version = version
 
 	inputs := getInputCount(bufReader)
-	var transactionInputs []*TransactionInput
+	transactionInputs := []*TransactionInput{}
 	for i := 0; i < int(inputs.Int64()); i++ {
 		input := NewTractionInput(bufReader)
 		transactionInputs = append(transactionInputs, input)
@@ -128,7 +161,7 @@ func ParseTransaction(binary []byte) *Transaction {
 
 	//read output counts
 	outputs := ReadVariant(bufReader)
-	var transactionOutputs []*TransactionOutput
+	transactionOutputs := []*TransactionOutput{}
 	for i := 0; i < int(outputs.Int64()); i++ {
 		output := NewTractionOutput(bufReader)
 		transactionOutputs = append(transactionOutputs, output)

@@ -27,7 +27,7 @@ type Point struct {
 func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *FieldElement {
 	/*
 			why do we need to bring operation on big.Int into one function?
-		try the following
+		    try the following =>
 			var opAdd big.Int
 			res := opAdd.Add(big.NewInt(int64(1)), big.NewInt(int64(2)))
 			opAdd.Add(big.NewInt(int64(3)), big.NewInt(int64(4)))
@@ -39,7 +39,7 @@ func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *
 	case ADD:
 		return x.Add(y)
 	case SUB:
-		return x.Sub(y)
+		return x.Subtract(y)
 	case MUL:
 		if y != nil {
 			return x.Mul(y)
@@ -81,25 +81,19 @@ func S256Point(x *big.Int, y *big.Int) *Point {
 	}
 }
 
-/*
-Verify
-
- 7. any one who wants to verify message z is created by owner of e:
-    1, compute u = z/s, v=r/s,
-    2, compute u*G + v*P = (z/s)*G + (r/s)*P = (z/s)*G+(r/s)*eG
-    =(z/s)*P + (r*e/s)*G = ((z+r*e)/s))*G = k*G = R'
-    3, take the x coordinate of R' compare with r
-    if the same => verify the message z is created by owner of e
-
-    Notice we have shown that n * G is identity, therefore,
-
-the above computation related to z, s, r, e need to do based on module of n,
-and remember the operator
-
-	"/" is not the normal arithmetic divide, it's the inverse of multiplication.
-*/
 func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
+	/*
+			7. any one who want to verify message z is created by owner of e:
+			    1, compute u = z/s, v=r/s,
+				2, compute u*G + v*P = (z/s)*G + (r/s)*P = (z/s)*G+(r/s)*eG
+					=(z/s)*P + (r*e/s)*G = ((z+r*e)/s))*G = k*G = R'
+				3, take the x coordinate of R compare with r
+					if the same => verify the message z is created by owner of e
 
+				notice we have shown that n * G is identity, therefore,
+		        the above computation related to z, s, r, e need to do based on module of n,
+		        and remember the operator "/" is not the normal arithmetic divide, its inverse of multiplication.
+	*/
 	sInverse := sig.s.Inverse()
 	u := z.Mul(sInverse)
 	v := sig.r.Mul(sInverse)
@@ -109,7 +103,7 @@ func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
 	return total.x.num.Cmp(sig.r.num) == 0
 }
 
-func NewECPoint(x *FieldElement, y *FieldElement, a *FieldElement, b *FieldElement) *Point {
+func NewEllipticPoint(x *FieldElement, y *FieldElement, a *FieldElement, b *FieldElement) *Point {
 	if x == nil && y == nil {
 		return &Point{
 			a: a,
@@ -147,7 +141,7 @@ func (p *Point) ScalarMul(scalar *big.Int) *Point {
 	*/
 	binaryForm := fmt.Sprintf("%b", scalar)
 	current := p
-	result := NewECPoint(nil, nil, p.a, p.b)
+	result := NewEllipticPoint(nil, nil, p.a, p.b)
 	for i := len(binaryForm) - 1; i >= 0; i-- {
 		if binaryForm[i] == '1' {
 			result = result.Add(current)
@@ -261,7 +255,7 @@ func (p *Point) NoEqual(other *Point) bool {
 }
 
 func (p *Point) Sec(compressed bool) (string, []byte) {
-	var secBytes []byte
+	secBytes := []byte{}
 	if !compressed {
 		/*
 			uncompressed sec:
@@ -296,7 +290,7 @@ func (p *Point) hash160(compressed bool) []byte {
 
 func (p *Point) Address(compressed bool, testnet bool) string {
 	hash160 := p.hash160(compressed)
-	var prefix []byte
+	prefix := []byte{}
 	if testnet {
 		prefix = append(prefix, 0x6f)
 	} else {

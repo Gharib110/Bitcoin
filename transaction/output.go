@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"bufio"
+	"fmt"
 	"math/big"
 )
 
@@ -9,6 +10,17 @@ type TransactionOutput struct {
 	//satoshi
 	amount       *big.Int
 	scriptPubKey *ScriptSig
+}
+
+func InitTransactionOutput(amount *big.Int, script *ScriptSig) *TransactionOutput {
+	return &TransactionOutput{
+		amount:       amount,
+		scriptPubKey: script,
+	}
+}
+
+func (t *TransactionOutput) String() string {
+	return fmt.Sprintf("amount:%v\n scriptPubKey: %x\n", t.amount, t.scriptPubKey.Serialize())
 }
 
 func NewTractionOutput(reader *bufio.Reader) *TransactionOutput {

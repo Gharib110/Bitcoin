@@ -33,7 +33,7 @@ func (p *PrivateKey) Sign(z *big.Int) *Signature {
 	//(s, r)
 	//s = (z + r * e) / k
 	// k is a strong random number
-	n := GetBitCoinValueN()
+	n := GetBitcoinValueN()
 	k, err := rand.Int(rand.Reader, n)
 	if err != nil {
 		panic(fmt.Sprintf("Sign err with rand int: %s", err))
@@ -83,7 +83,7 @@ if the length of bytes array < 32 bytes, append leading 0 to 32 bytes
 4,5 base58checksum
 */
 func (p *PrivateKey) Wif(compressed bool, testnet bool) string {
-	var bytes []byte
+	bytes := []byte{}
 	if testnet {
 		bytes = append(bytes, 0xef)
 	} else {

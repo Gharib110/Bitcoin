@@ -79,3 +79,15 @@ is about "Jim using 10 dollars to buy a cup of coffee with price of 3 dollars," 
 
 If the transaction is honest, then the input of the transaction(10 dollars) should be greater than the output of the transaction(7 dollars), that is when we use the amount of input minus the amount of the output
 the result should be positive, if the result is negative, then the transaction is "dishonest" it wants to fake money from air.
+
+## Transaction Creation
+A transaction is recording an event of bitcoin transition,
+it needs to make sure where the bitcoins transfer to, is the input for this transaction legal or valid,
+and how quickly the transaction can on chain which
+means the transaction is legally accepted.
+
+Let's see how to construct a valid transaction and send it to the network,
+this process maybe like you first go to the bank,
+deposit some amount of money in your account and transfer some of them to your friend.
+The first thing we need to do is convert a wallet address from base58 encoded,
+that is we need a process that can get its original content when the input is encoded by base58.
