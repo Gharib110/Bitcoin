@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	ecc "github.com/Gharib110/Bitcoin/elliptic_curve"
+	"io"
 	"math/big"
 )
 
@@ -60,7 +61,8 @@ func getInputCount(bufReader *bufio.Reader) *big.Int {
 	if firstByte[0] == 0x00 {
 		//skip the first two bytes
 		skipBuf := make([]byte, 2)
-		_, err = bufReader.Read(skipBuf)
+		//_, err = bufReader.Read(skipBuf)
+		_, err = io.ReadFull(bufReader, skipBuf)
 		if err != nil {
 			panic(err)
 		}
@@ -74,7 +76,7 @@ func getInputCount(bufReader *bufio.Reader) *big.Int {
 func (t *Transaction) SerializeWithSign(inputIdx int) []byte {
 	/*
 		construct a signature message for the given input indicate by inputIdx,
-		we need to change the given scripts with the scriptPubKey from the
+		we need to change the given scriptSig with the scriptPubKey from the
 		output of the previous transaction, and then do hash256 on the binary transaction
 		data
 	*/
@@ -145,7 +147,8 @@ func ParseTransaction(binary []byte) *Transaction {
 	bufReader := bufio.NewReader(reader)
 
 	verBuf := make([]byte, 4)
-	bufReader.Read(verBuf)
+	//bufReader.Read(verBuf)
+	io.ReadFull(bufReader, verBuf)
 
 	version := LittleEndianToBigInt(verBuf, LittleEndian4Bytes)
 	fmt.Printf("transaction version:%x\n", version)
@@ -170,7 +173,8 @@ func ParseTransaction(binary []byte) *Transaction {
 
 	//get last four bytes for lock time
 	lockTimeBytes := make([]byte, 4)
-	bufReader.Read(lockTimeBytes)
+	//bufReader.Read(lockTimeBytes)
+	io.ReadFull(bufReader, lockTimeBytes)
 	transaction.lockTime = LittleEndianToBigInt(lockTimeBytes, LittleEndian4Bytes)
 
 	return transaction

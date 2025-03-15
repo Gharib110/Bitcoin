@@ -3,6 +3,7 @@ package transaction
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math/big"
 )
 
@@ -28,7 +29,9 @@ func NewTractionOutput(reader *bufio.Reader) *TransactionOutput {
 		the amount is in satoshi 1/100,000,0000 of one bitcoin
 	*/
 	amountBuf := make([]byte, 8)
-	reader.Read(amountBuf)
+	//bug fix
+	//reader.Read(amountBuf)
+	io.ReadFull(reader, amountBuf)
 	amount := LittleEndianToBigInt(amountBuf, LittleEndian8Bytes)
 	script := NewScriptSig(reader)
 	return &TransactionOutput{

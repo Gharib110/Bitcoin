@@ -2,7 +2,9 @@ package transaction
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"math/big"
 )
 
@@ -51,21 +53,27 @@ func NewTractionInput(reader *bufio.Reader) *TransactionInput {
 	transactionInput.fetcher = NewTransactionFetch()
 
 	previousTransaction := make([]byte, 32)
-	reader.Read(previousTransaction)
+	//bug fix
+	//reader.Read(previousTransaction)
+	io.ReadFull(reader, previousTransaction)
 	//convert it from little endian to big endian
 	//reverse the byte array [0x01, 0x02, 0x03, 0x04] -> [0x04, 0x03, 0x02, 0x01]
 	transactionInput.previousTransactionID = reverseByteSlice(previousTransaction)
 
 	//4 bytes for previous transaction index
 	idx := make([]byte, 4)
-	reader.Read(idx)
+	//bug fix, io.ReadFull
+	//reader.Read(idx)
+	io.ReadFull(reader, idx)
 	transactionInput.previousTransactionIndex = LittleEndianToBigInt(idx, LittleEndian4Bytes)
 
 	transactionInput.scriptSig = NewScriptSig(reader)
 
 	//last four bytes for a sequence
 	seqBytes := make([]byte, 4)
-	reader.Read(seqBytes)
+	//bug fix, io.ReadFull
+	//reader.Read(seqBytes)
+	io.ReadFull(reader, seqBytes)
 	transactionInput.sequence = LittleEndianToBigInt(seqBytes, LittleEndian4Bytes)
 
 	return transactionInput
@@ -98,9 +106,45 @@ func (t *TransactionInput) scriptPubKey(testnet bool) *ScriptSig {
 	return tx.txOutputs[t.previousTransactionIndex.Int64()].scriptPubKey
 }
 
+func (t *TransactionInput) isP2sh(script *ScriptSig) bool {
+	isP2sh := true
+	if len(script.bitcoinOpCode.commands[0]) != 1 || script.bitcoinOpCode.commands[0][0] != OP_HASH160 {
+		isP2sh = false
+	}
+
+	if len(script.bitcoinOpCode.commands[1]) == 1 {
+		isP2sh = false
+	}
+
+	if len(script.bitcoinOpCode.commands[2]) != 1 || script.bitcoinOpCode.commands[2][0] != OP_EQUAL {
+		isP2sh = false
+	}
+
+	return isP2sh
+}
+
 func (t *TransactionInput) ReplaceWithScriptPubKey(testnet bool) {
-	t.scriptSig = t.scriptPubKey(testnet)
-	fmt.Printf("scriptpubkey: %v\n", t.scriptSig)
+	/*
+		if it is a P2SH transaction, we use the redeem script to replace the
+		scriptSig of the current input
+	*/
+	script := t.scriptPubKey(testnet)
+	isP2sh := t.isP2sh(script)
+	if isP2sh != true {
+		t.scriptSig = script
+	} else {
+		/*
+			for P2SH, we need to use the redeem script to replace the input script;
+			the redeem script is at the bottom of scriptSig command stack
+		*/
+		redeemScriptBinary := t.scriptSig.bitcoinOpCode.commands[len(t.scriptSig.bitcoinOpCode.commands)-1]
+		//bug here, append total length to the head
+		redeemScriptBinary = append([]byte{byte(len(redeemScriptBinary))}, redeemScriptBinary...)
+		redeemScriptReader := bytes.NewReader(redeemScriptBinary)
+		redeemScript := NewScriptSig(bufio.NewReader(redeemScriptReader))
+		t.scriptSig = redeemScript
+	}
+
 }
 
 func (t *TransactionInput) Serialize() []byte {

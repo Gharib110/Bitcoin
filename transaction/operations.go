@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	ecc "github.com/Gharib110/Bitcoin/elliptic_curve"
@@ -123,14 +124,25 @@ const (
 	OP_NOP10
 )
 
-type BitcoinOpCode struct {
+const (
+	/*
+	   this is not a bitcoin script command, it is defined by ourselves,
+	   if we encounter the P2SH pattern on the script stack, that is the
+	   first element is data chunk, the second element is OP_HASH160,
+	   the third element is a chunk of data, the fourth element is
+	   OP_EQUAL, then we will use this command to do P2SH parsing
+	*/
+	OP_P2SH = 254
+)
+
+type BitCoinOpCode struct {
 	opCodeNames map[int]string
 	stack       [][]byte
 	altStack    [][]byte
 	commands    [][]byte
 }
 
-func NewBitCoinOpCode() *BitcoinOpCode {
+func NewBitCoinOpCode() *BitCoinOpCode {
 	opCodeNames := map[int]string{
 		0:   "OP_0",
 		76:  "OP_PUSHDATA1",
@@ -224,7 +236,7 @@ func NewBitCoinOpCode() *BitcoinOpCode {
 		184: "OP_NOP9",
 		185: "OP_NOP10",
 	}
-	return &BitcoinOpCode{
+	return &BitCoinOpCode{
 		opCodeNames: opCodeNames,
 		stack:       make([][]byte, 0),
 		altStack:    make([][]byte, 0),
@@ -232,7 +244,41 @@ func NewBitCoinOpCode() *BitcoinOpCode {
 	}
 }
 
-func (b *BitcoinOpCode) opDup() bool {
+// OP_0, OP_1, OP_2, push the given value on the top of parsing
+func (b *BitCoinOpCode) opNum(op byte) bool {
+	opNum := byte(0)
+	if op >= OP_1 && op <= OP_16 {
+		opNum = (op - OP_1) + 1
+	}
+	b.stack = append(b.stack, b.EncodeNum(int64(opNum)))
+	return true
+}
+
+/*
+isP2sh
+check the pattern for P2SH
+*/
+func (b *BitCoinOpCode) isP2sh() bool {
+	/*
+		the command stack has three elements; first is OP_HASH160, second is data chunk,
+		the third is OP_EQUAL
+	*/
+	if len(b.commands[0]) != 1 && b.commands[0][0] != OP_HASH160 {
+		return false
+	}
+
+	if len(b.commands[1]) == 1 {
+		return false
+	}
+
+	if len(b.commands[2]) != 1 && b.commands[2][0] != OP_EQUAL {
+		return false
+	}
+
+	return true
+}
+
+func (b *BitCoinOpCode) opDup() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -241,7 +287,7 @@ func (b *BitcoinOpCode) opDup() bool {
 	return true
 }
 
-func (b *BitcoinOpCode) opHash160() bool {
+func (b *BitCoinOpCode) opHash160() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -253,7 +299,7 @@ func (b *BitcoinOpCode) opHash160() bool {
 	return true
 }
 
-func (b *BitcoinOpCode) opEqual() bool {
+func (b *BitCoinOpCode) opEqual() bool {
 	if len(b.stack) < 2 {
 		return false
 	}
@@ -271,7 +317,7 @@ func (b *BitcoinOpCode) opEqual() bool {
 	return true
 }
 
-func (b *BitcoinOpCode) opVerify() bool {
+func (b *BitCoinOpCode) opVerify() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -285,26 +331,106 @@ func (b *BitcoinOpCode) opVerify() bool {
 	return true
 }
 
-func (b *BitcoinOpCode) opEqualVerify() bool {
+func (b *BitCoinOpCode) opEqualVerify() bool {
 	resEqual := b.opEqual()
 	resVerify := b.opVerify()
 	return resEqual && resVerify
 }
 
-func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
+/*
+popStack
+OP_CHECKMULTISIG, structure of the evaluated stack:
+1. number of public keys (2 pubKeys)
+2. public-Key2
+3. public-Key1
+4. number of signatures (1 signature)
+5. signature
+6. []
+*/
+func (b *BitCoinOpCode) popStack() []byte {
+	elem := b.stack[len(b.stack)-1]
+	b.stack = b.stack[0 : len(b.stack)-1]
+	return elem
+}
+
+func (b *BitCoinOpCode) opCheckMultiSig(zBin []byte) bool {
+	if len(b.stack) < 1 {
+		return false
+	}
+	//read the top element to get the number of public keys
+	pubKeyCounts := int(b.DecodeNum(b.popStack()))
+	if len(b.stack) < pubKeyCounts+1 {
+		return false
+	}
+	secPubKeys := make([][]byte, 0)
+	for i := 0; i < pubKeyCounts; i++ {
+		secPubKeys = append(secPubKeys, b.popStack())
+	}
+
+	//get the number of signatures
+	sigCounts := int(b.DecodeNum(b.popStack()))
+	if len(b.stack) < sigCounts+1 {
+		return false
+	}
+
+	derSignatures := make([][]byte, 0)
+	for i := 0; i < sigCounts; i++ {
+		signature := b.popStack()
+		//remove the last byte, it is a hash type
+		signature = signature[0 : len(signature)-1]
+		derSignatures = append(derSignatures, signature)
+	}
+
+	points := make([]*ecc.Point, 0)
+	sigs := make([]*ecc.Signature, 0)
+	for i := 0; i < pubKeyCounts; i++ {
+		points = append(points, ecc.ParseSEC(secPubKeys[i]))
+	}
+	for i := 0; i < sigCounts; i++ {
+		sigs = append(sigs, ecc.ParseSigBin(derSignatures[i]))
+	}
+
 	/*
-		OP_CHECKSIG verify the validity of the message z,
-		DER binary data of the signature and the uncompressed sec public key
-		are top two elements of the stack
+		m public keys, n signatures, m >= n, given the signature with index i,
+		we need to find the paring key with index after i,
+	*/
+	z := new(big.Int)
+	z.SetBytes(zBin)
+	n := ecc.GetBitcoinValueN()
+	zField := ecc.NewFieldElement(n, z)
+	for _, sig := range sigs {
+		if len(points) == 0 {
+			return false
+		}
 
-		notice!! we need to remove the last byte of the der binary data because
-		this byte is used for a hash type
+		for len(points) > 0 {
+			point := points[0]
+			points = points[1:]
+			if point.Verify(zField, sig) {
+				break
+			}
+		}
+	}
 
-		if the signature verification success, push 1 on the stack, otherwise
-		push 0 on the stack
+	b.stack = append(b.stack, b.EncodeNum(1))
+	return true
+}
 
-		if the script is using uncompressed sec format for a public key,
-		then a script is called P2PK (pay for a public key)
+func (b *BitCoinOpCode) opCheckSig(zBin []byte) bool {
+	/*
+			OP_CHECKSIG verify the validity of the message z,
+			DER binary data of the signature and the uncompressed sec public key
+			are top two elements of the stack
+
+			notice!!
+		    we need to remove the last byte of the der binary data because
+			this byte is used for a hash type
+
+			if the signature verification success, push 1 on the stack, otherwise
+			push 0 on the stack
+
+			if the script is using uncompressed sec format for a public key,
+			then the script is called P2PK (pay for a public key)
 	*/
 	if len(b.stack) < 2 {
 		return false
@@ -331,21 +457,67 @@ func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 	return true
 }
 
-func (b *BitcoinOpCode) RemoveCmd() []byte {
+func (b *BitCoinOpCode) RemoveCmd() []byte {
 	cmd := b.commands[0]
 	b.commands = b.commands[1:]
 	return cmd
 }
 
-func (b *BitcoinOpCode) HasCmd() bool {
+func (b *BitCoinOpCode) HasCmd() bool {
 	return len(b.commands) > 0
 }
 
-func (b *BitcoinOpCode) AppendDataElement(element []byte) {
-	b.stack = append(b.stack, element)
+func (b *BitCoinOpCode) opP2sh() bool {
+	//the first command is OP_HASH160
+	b.RemoveCmd()
+	//second element is data chunk
+	h160 := b.RemoveCmd()
+	//buf fix, remove OP_EQUAL
+	b.RemoveCmd()
+	/*
+		the top element of stack is the content of redeem script, cache it then
+		do hash160 on it
+	*/
+	redeemScriptBinary := b.stack[len(b.stack)-1]
+	if b.opHash160() != true {
+		return false
+	}
+	//append the h160 on the top of stack
+	b.stack = append(b.stack, h160)
+	//compare the two top hash elements
+	if b.opEqual() != true {
+		return false
+	}
+
+	//make sure the top element is 1
+	if b.opVerify() != true {
+		return false
+	}
+
+	//need to parse the redeem script and execute its command
+	//bug here, append the total length at the beginning
+	redeemScriptBinary = append([]byte{byte(len(redeemScriptBinary))}, redeemScriptBinary...)
+	scriptReader := bytes.NewReader(redeemScriptBinary)
+	redeemScriptSig := NewScriptSig(bufio.NewReader(scriptReader))
+	//bug here
+	b.commands = append(b.commands, redeemScriptSig.bitcoinOpCode.commands...)
+	return true
+
 }
 
-func (b *BitcoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
+func (b *BitCoinOpCode) AppendDataElement(element []byte) {
+	b.stack = append(b.stack, element)
+	/*
+		everytime we push a data element, we need to check the command stack
+		meet the pattern of P2SH
+	*/
+	if b.isP2sh() {
+		//insert the OP_P2SH to the head of the command stack
+		b.commands = append([][]byte{[]byte{OP_P2SH}}, b.commands...)
+	}
+}
+
+func (b *BitCoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 	/*
 		if the operation executed successfully then return true,
 		otherwise return false
@@ -359,6 +531,47 @@ func (b *BitcoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 		return b.opHash160()
 	case OP_EQUALVERIFY:
 		return b.opEqualVerify()
+	case OP_CHECKMULTISIG:
+		//bug fix here
+		return b.opCheckMultiSig(z)
+	case OP_P2SH:
+		return b.opP2sh()
+	case OP_0:
+		fallthrough
+	case OP_1:
+		fallthrough
+	case OP_2:
+		fallthrough
+	case OP_3:
+		fallthrough
+	case OP_4:
+		fallthrough
+	case OP_5:
+		fallthrough
+	case OP_6:
+		fallthrough
+	case OP_7:
+		fallthrough
+	case OP_8:
+		fallthrough
+	case OP_9:
+		fallthrough
+	case OP_10:
+		fallthrough
+	case OP_11:
+		fallthrough
+	case OP_12:
+		fallthrough
+	case OP_13:
+		fallthrough
+	case OP_14:
+		fallthrough
+	case OP_15:
+		fallthrough
+	case OP_16:
+		return b.opNum(byte(cmd))
+	case OP_EQUAL:
+		return b.opEqual()
 	default:
 		errStr := fmt.Sprintf("opeation %s not implemented\n", b.opCodeNames[cmd])
 		panic(errStr)
@@ -367,7 +580,7 @@ func (b *BitcoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 	return false
 }
 
-func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
+func (b *BitCoinOpCode) EncodeNum(num int64) []byte {
 	if num == 0 {
 		//not push 0x00 but empty byte string
 		return []byte("")
@@ -392,7 +605,7 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 
 	/*
 		check the most significant bit, notice the most significant byte is
-		at the end of rust
+		at the end of result
 		0x8080 -> 32896-32896
 	*/
 	if (result[len(result)-1] & 0x80) != 0 {
@@ -411,7 +624,7 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 	return result
 }
 
-func (b *BitcoinOpCode) DecodeNum(element []byte) int64 {
+func (b *BitCoinOpCode) DecodeNum(element []byte) int64 {
 	//check empty byte string
 	if len(element) == 0 {
 		return 0

@@ -12,7 +12,7 @@ import (
 type LittleEndianLength int
 
 const (
-	SatoshiPerBitcoin = 100000000
+	SatoshiPerBitCoin = 100000000
 )
 
 const (
@@ -80,22 +80,19 @@ func LittleEndianToBigInt(bytes []byte, length LittleEndianLength) *big.Int {
 	return nil
 }
 
-/*
-ReadVariant
-
- 1. check the byte after the version, < 0xfd,
-    then the value of the byte is the count of input
-
- 2. if the byte value >= 0xfd < fe, read the following 2 bytes as the count of input
-
- 3. if the byte following the version is >=0xfe < 0xff
-    read the following 4 bytes as the count of input
-
- 4. if the byte following version is == 0xff, we read the following 8 bytes as a count
-    of input
-*/
 func ReadVariant(reader *bufio.Reader) *big.Int {
+	/*
+		1. check the byte after the version, < 0xfd,
+		then the value of the byte is the count of input
 
+		2. if the byte value >=0xfd < fe, read the following 2 bytes as the count of input
+
+		3. if the byte following the version is >=0xfe < 0xff
+		read the following 4 bytes as the count of input
+
+		4. if the byte following version is == 0xff, we read the following 8 bytes as the count
+		of input
+	*/
 	i := make([]byte, 1)
 	reader.Read(i)
 	v := new(big.Int)
