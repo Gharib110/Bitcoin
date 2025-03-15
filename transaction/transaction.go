@@ -4,7 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	ecc "github.com/Gharib110/Bitcoin/elliptic_curve"
 	"math/big"
+)
+
+const (
+	SIGHASH_ALL = 1
 )
 
 type Transaction struct {
@@ -36,6 +41,69 @@ func getInputCount(bufReader *bufio.Reader) *big.Int {
 	count := ReadVariant(bufReader)
 	fmt.Printf("input count is: %x\n", count)
 	return count
+}
+
+func (t *Transaction) SignHash(inputIdx int) []byte {
+	/*
+		construct signature message for the given input indicate by inputIdx,
+		we need to change the given scriptSig with the scriptPubKey from the
+		output of previous transaction, and then do hash256 on the binary transaction
+		data
+	*/
+	signBinary := make([]byte, 0)
+	signBinary = append(signBinary, BigIntToLittleEndian(t.version, LittleEndian4Bytes)...)
+
+	inputCount := big.NewInt(int64(len(t.txInputs)))
+	signBinary = append(signBinary, EncodeVariant(inputCount)...)
+	/*
+		serialize inputs, need to replace the scriptSig of the given input
+		to scriptPubKey of previous transaction
+	*/
+	for i := 0; i < len(t.txInputs); i++ {
+		if i == inputIdx {
+			t.txInputs[i].ReplaceWithScriptPubKey(t.testnet)
+			signBinary = append(signBinary, t.txInputs[i].Serialize()...)
+		} else {
+			signBinary = append(signBinary, t.txInputs[i].Serialize()...)
+		}
+	}
+
+	outputCount := big.NewInt(int64(len(t.txOutputs)))
+	signBinary = append(signBinary, EncodeVariant(outputCount)...)
+	for i := 0; i < len(t.txOutputs); i++ {
+		signBinary = append(signBinary, t.txOutputs[i].Serialize()...)
+	}
+
+	signBinary = append(signBinary, BigIntToLittleEndian(t.lockTime, LittleEndian4Bytes)...)
+	signBinary = append(signBinary,
+		BigIntToLittleEndian(big.NewInt(int64(SIGHASH_ALL)), LittleEndian4Bytes)...)
+
+	h256 := ecc.Hash256(string(signBinary))
+	return h256
+}
+
+func (t *Transaction) VerifyInput(inputIndex int) bool {
+	verifyScript := t.GetScript(inputIndex, t.testnet)
+	z := t.SignHash(inputIndex)
+	return verifyScript.Evaluate(z)
+}
+
+func (t *Transaction) Verify() bool {
+	/*
+		1. verify fee
+		2. verify each transaction input
+	*/
+	if t.Fee().Cmp(big.NewInt(int64(0))) < 0 {
+		return false
+	}
+
+	for i := 0; i < len(t.txInputs); i++ {
+		if t.VerifyInput(i) != true {
+			return false
+		}
+	}
+
+	return true
 }
 
 func ParseTransaction(binary []byte) *Transaction {

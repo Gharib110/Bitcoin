@@ -130,7 +130,7 @@ type BitcoinOpCode struct {
 	commands    [][]byte
 }
 
-func NewBitcoinOpCode() *BitcoinOpCode {
+func NewBicoinOpCode() *BitcoinOpCode {
 	opCodeNames := map[int]string{
 		0:   "OP_0",
 		76:  "OP_PUSHDATA1",

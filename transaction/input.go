@@ -15,7 +15,7 @@ type TransactionInput struct {
 }
 
 func reverseByteSlice(bytes []byte) []byte {
-	var reverseBytes []byte
+	reverseBytes := []byte{}
 	for i := len(bytes) - 1; i >= 0; i-- {
 		reverseBytes = append(reverseBytes, bytes[i])
 	}
@@ -52,10 +52,15 @@ func NewTractionInput(reader *bufio.Reader) *TransactionInput {
 	return transactionInput
 }
 
-func (t *TransactionInput) Value(testnet bool) *big.Int {
+func (t *TransactionInput) getPreviousTx(testnet bool) *Transaction {
 	previousTxID := fmt.Sprintf("%x", t.previousTransactionID)
 	previousTX := t.fetcher.Fetch(previousTxID, testnet)
 	tx := ParseTransaction(previousTX)
+	return tx
+}
+
+func (t *TransactionInput) Value(testnet bool) *big.Int {
+	tx := t.getPreviousTx(testnet)
 
 	return tx.txOutputs[t.previousTransactionIndex.Int64()].amount
 }
@@ -67,6 +72,16 @@ func (t *TransactionInput) Script(testnet bool) *ScriptSig {
 
 	scriptPubKey := tx.txOutputs[t.previousTransactionIndex.Int64()].scriptPubKey
 	return t.scriptSig.Add(scriptPubKey)
+}
+
+func (t *TransactionInput) scriptPubKey(testnet bool) *ScriptSig {
+	tx := t.getPreviousTx(testnet)
+	return tx.txOutputs[t.previousTransactionIndex.Int64()].scriptPubKey
+}
+
+func (t *TransactionInput) ReplaceWithScriptPubKey(testnet bool) {
+	t.scriptSig = t.scriptPubKey(testnet)
+	fmt.Printf("scriptpubkey: %x\n", t.scriptSig)
 }
 
 func (t *TransactionInput) Serialize() []byte {
