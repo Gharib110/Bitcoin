@@ -94,12 +94,12 @@ that is we need a process that can get its original content when the input is en
 
 ## P2SH Signature Verification
 Signature verification is tricky for P2SH transaction.
-Since it has several keys and signatures and order of signature should be the same as public key
-which means if the order of signature is n then its corresponding
+Since it has several keys and signatures and order of signature should be the same as public key, 
+which means if the order of signature is n, then its corresponding
  public key should have order m >= n.
 
 Now comes to how to construct the signature message z. Let's take it step by step,
-the following data chunk is a P2SH transaction and the chunk in { and } is the scriptSig of integers input:
+the following data chunk is a P2SH transaction and the chunk in { and } is the scriptSig of integer input:
 
 ```g
 0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6bd304d87221a
@@ -134,7 +134,7 @@ c15f483a56a88ac7f400900000000001976a914418327e3f3dda4cf5b9089325a4b95abdfa033408
 ```
 
 2. the owner of P2SH transaction has the binary content of the redeem script,
-and we use the binary content of the redeem script to replace the 00 above,
+and we use the binary content of the redeem script to replace the 00 above —
 for example, the content of the given redeem script is :
 ```g
 475221022626e955ea6ea6d98850c994f9107b036b1334f18ca8830bfff1295d21cfdb702103b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7fbdbd4bb7152ae
@@ -175,7 +175,7 @@ if all board members sign to the contract.
 
 In order to support multiple private keys for one transaction, we need to use the op code with name OP_CHECKMULTISIG,
 its hex value is 0xae.
-This is a quit complicated opeation; it needs many elements on the stack
+This is a quit-complicated operation; it needs many elements on the stack
 to operate, the following binary data is a contract with two public keys:
 
 ```g
@@ -189,7 +189,7 @@ Let's break it down into pieces:
 
 2. the second byte 0x41 is the length for the following data chunk which is the first public key
 
-3. the following 0x41 bytes of data is the raw data of the first publick key:
+3. the following 0x41 bytes of data is the raw data of the first public key:
 
 04fcf07bb1222f7925f2b7cc15183a40443c578e62ea17100aa
 3b44ba66905c95d4980aec4cd2f6eb426d1b1ec45d76724f26901099416b9265b
@@ -216,7 +216,7 @@ The corresponding scriptSig in current transaction input is as following:
 
 2. the second byte 0x48 is the length of signature
 
-3. the data chunk following the second byte is belongs to signature:
+3. the data chunk following the second byte belongs to signature:
 
 ```g
 3045022100e222a0a6816475d85ad28fbeb66e97c
