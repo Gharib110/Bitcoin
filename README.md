@@ -1,5 +1,5 @@
 # Bitcoin
-Bitcoin Implementation in Golang
+Bitcoin Core Implementation in Golang
 
 ## Elliptic Curve
 Bitcoin relies heavily on a match object called elliptic curve,
