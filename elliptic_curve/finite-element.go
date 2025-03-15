@@ -77,7 +77,7 @@ func (f *FieldElement) Negate() *FieldElement {
 	return NewFieldElement(f.order, op.Sub(f.order, f.num))
 }
 
-func (f *FieldElement) Subtract(other *FieldElement) *FieldElement {
+func (f *FieldElement) Sub(other *FieldElement) *FieldElement {
 	/*
 		a b elements of the finite set, c = a - b, given b how can we find c,
 		(b + c) % order = a, a - b => (a + (-b) ) % order

@@ -39,7 +39,7 @@ func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *
 	case ADD:
 		return x.Add(y)
 	case SUB:
-		return x.Subtract(y)
+		return x.Sub(y)
 	case MUL:
 		if y != nil {
 			return x.Mul(y)
