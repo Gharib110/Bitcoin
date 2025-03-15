@@ -45,9 +45,9 @@ func getInputCount(bufReader *bufio.Reader) *big.Int {
 
 func (t *Transaction) SignHash(inputIdx int) []byte {
 	/*
-		construct signature message for the given input indicate by inputIdx,
+		construct a signature message for the given input indicate by inputIdx,
 		we need to change the given scriptSig with the scriptPubKey from the
-		output of previous transaction, and then do hash256 on the binary transaction
+		output of the previous transaction, and then do hash256 on the binary transaction
 		data
 	*/
 	signBinary := make([]byte, 0)

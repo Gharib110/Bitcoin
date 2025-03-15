@@ -5,10 +5,10 @@ import (
 	"math/big"
 )
 
-type OP_TPYE int
+type OpType int
 
 const (
-	ADD OP_TPYE = iota
+	ADD OpType = iota
 	SUB
 	MUL
 	DIV
@@ -24,7 +24,17 @@ type Point struct {
 	y *FieldElement
 }
 
-func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OP_TPYE) *FieldElement {
+func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *FieldElement {
+	/*
+			why do we need to bring operation on big.Int into one function?
+		try the following
+			var opAdd big.Int
+			res := opAdd.Add(big.NewInt(int64(1)), big.NewInt(int64(2)))
+			opAdd.Add(big.NewInt(int64(3)), big.NewInt(int64(4)))
+			//res is 3 or 7?
+			fmt.Printf("val of res is :%d\n", res.String())
+	*/
+
 	switch opType {
 	case ADD:
 		return x.Add(y)
@@ -71,19 +81,25 @@ func S256Point(x *big.Int, y *big.Int) *Point {
 	}
 }
 
-func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
-	/*
-			7. any one who want to verify message z is created by owner of e:
-			    1, compute u = z/s, v=r/s,
-				2, compute u*G + v*P = (z/s)*G + (r/s)*P = (z/s)*G+(r/s)*eG
-					=(z/s)*P + (r*e/s)*G = ((z+r*e)/s))*G = k*G = R'
-				3, take the x coordinate of R' compare with r
-					if the same => verify the message z is created by owner of e
+/*
+Verify
 
-				notice we have shown that n * G is identity, therefore the above computation related to
-		        z, s, r, e need to do base on modular of n, and remember the operator
-				"/" is not the normal arithmetic divide , it's the inverse of  multiplication.
-	*/
+ 7. any one who wants to verify message z is created by owner of e:
+    1, compute u = z/s, v=r/s,
+    2, compute u*G + v*P = (z/s)*G + (r/s)*P = (z/s)*G+(r/s)*eG
+    =(z/s)*P + (r*e/s)*G = ((z+r*e)/s))*G = k*G = R'
+    3, take the x coordinate of R' compare with r
+    if the same => verify the message z is created by owner of e
+
+    Notice we have shown that n * G is identity, therefore,
+
+the above computation related to z, s, r, e need to do based on module of n,
+and remember the operator
+
+	"/" is not the normal arithmetic divide, it's the inverse of multiplication.
+*/
+func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
+
 	sInverse := sig.s.Inverse()
 	u := z.Mul(sInverse)
 	v := sig.r.Mul(sInverse)
@@ -108,7 +124,7 @@ func NewECPoint(x *FieldElement, y *FieldElement, a *FieldElement, b *FieldEleme
 	ax := OpOnBig(a, x, nil, MUL)
 	right := OpOnBig(OpOnBig(x3, ax, nil, ADD), b, nil, ADD)
 	//if x and y are nil, then its identity point, and
-	//we don't need to check it on curve
+	//we don't need to check it on a curve
 	if left.EqualTo(right) != true {
 		err := fmt.Sprintf("point:(%v, %v) is not on the curve with a: %v, b:%v\n", x, y, a, b)
 		panic(err)
@@ -127,7 +143,7 @@ func (p *Point) ScalarMul(scalar *big.Int) *Point {
 		panic("scalar mul error ofr nil scalar")
 	}
 	/*
-		turn scalar into binary string form, for example 13 will turn into "1101"
+		turn scalar into a binary string form - for example, 13 will turn into "1101"
 	*/
 	binaryForm := fmt.Sprintf("%b", scalar)
 	current := p
@@ -150,7 +166,7 @@ func (p *Point) Add(other *Point) *Point {
 	}
 
 	if p.x == nil {
-		//current point is identity point
+		//the current point is identity point
 		return other
 	}
 
@@ -245,7 +261,7 @@ func (p *Point) NoEqual(other *Point) bool {
 }
 
 func (p *Point) Sec(compressed bool) (string, []byte) {
-	secBytes := []byte{}
+	var secBytes []byte
 	if !compressed {
 		/*
 			uncompressed sec:
@@ -280,7 +296,7 @@ func (p *Point) hash160(compressed bool) []byte {
 
 func (p *Point) Address(compressed bool, testnet bool) string {
 	hash160 := p.hash160(compressed)
-	prefix := []byte{}
+	var prefix []byte
 	if testnet {
 		prefix = append(prefix, 0x6f)
 	} else {

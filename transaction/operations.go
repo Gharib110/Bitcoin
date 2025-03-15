@@ -293,18 +293,19 @@ func (b *BitcoinOpCode) opEqualVerify() bool {
 
 func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 	/*
-		OP_CHECKSIG verify validity of the message z,
-		DER binary data of the signature and the uncompressed sec public key
-		are top two elements of the stack
+			OP_CHECKSIG verify the validity of the message z,
+			DER binary data of the signature and the uncompressed sec public key
+			are top two elements of the stack
 
-		notice!! we need to remove the last byte of the der binary data, because
-		this byte is used for hash type
+			notice!!
+		    we need to remove the last byte of the DER binary data because
+			this byte is used for a hash type.
 
-		if the signature verification success , push 1 on the stack, otherwise
-		push 0 on the stack
+			if the signature verification success, push 1 on the stack, otherwise
+			push 0 on the stack.
 
-		if the script is using uncompressed sec format for public key
-		then script is called P2PK (pay to public key)
+			if the script is using uncompressed sec format for a public key,
+			then a script is called P2PK (pay for a public key).
 	*/
 	if len(b.stack) < 2 {
 		return false
@@ -383,8 +384,8 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 
 	for absNum > 0 {
 		/*
-			append the last byte of asbNum into result,
-			notices result will be little endian byte array of absNum
+					append the last byte of asbNum into a result,
+			a notice result will be little endian byte array of absNum
 		*/
 		result = append(result, byte(absNum&0xff))
 		absNum >>= 8
@@ -393,11 +394,11 @@ func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 	/*
 		check the most significant bit, notice the most significant byte is
 		at the end of result
-		0x8080 -> 32896 -32896
+		0x8080 -> 32896-32896
 	*/
 	if (result[len(result)-1] & 0x80) != 0 {
 		if negative {
-			//need to insert 0x80 at the head, most significant byte is at the end
+			//need to insert 0x80 at the head, the most significant byte is at the end
 			//of result, we should insert 0x80 at the end
 			result = append(result, 0x80)
 		} else {

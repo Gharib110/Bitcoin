@@ -13,7 +13,7 @@ type TransactionOutput struct {
 
 func NewTractionOutput(reader *bufio.Reader) *TransactionOutput {
 	/*
-		amount is in satoshi 1/100,000,0000 of one bitcoin
+		the amount is in satoshi 1/100,000,0000 of one bitcoin
 	*/
 	amountBuf := make([]byte, 8)
 	reader.Read(amountBuf)

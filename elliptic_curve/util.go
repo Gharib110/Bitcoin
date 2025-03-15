@@ -4,71 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
-	"github.com/tsuna/endian"
-	"golang.org/x/crypto/ripemd160"
 	"math/big"
+
+	"golang.org/x/crypto/ripemd160"
 )
-
-type LittleEndianLength int
-
-const (
-	LittleEndian2Bytes = iota
-	LittleEndian4Bytes
-	LittleEndian8Bytes
-)
-
-func BigIntToLittleEndian(v *big.Int, length LittleEndianLength) []byte {
-	switch length {
-	case LittleEndian2Bytes:
-		val := v.Int64()
-		littleEndianVal := endian.HostToNetUint16(uint16(val))
-		p := big.NewInt(int64(littleEndianVal))
-		return p.Bytes()
-
-	case LittleEndian4Bytes:
-		val := v.Int64()
-		littleEndianVal := endian.HostToNetUint32(uint32(val))
-		p := big.NewInt(int64(littleEndianVal))
-		return p.Bytes()
-
-	case LittleEndian8Bytes:
-		val := v.Int64()
-		littleEndianVal := endian.HostToNetUint64(uint64(val))
-		p := big.NewInt(int64(littleEndianVal))
-		return p.Bytes()
-	}
-
-	return nil
-}
-
-func LittleEndianToBigInt(bytes []byte, length LittleEndianLength) *big.Int {
-	switch length {
-	case LittleEndian2Bytes:
-		p := new(big.Int)
-		p.SetBytes(bytes)
-		val := endian.NetToHostUint16(uint16(p.Uint64()))
-		return big.NewInt(int64(val))
-
-	case LittleEndian4Bytes:
-		p := new(big.Int)
-		p.SetBytes(bytes)
-		val := endian.NetToHostUint32(uint32(p.Uint64()))
-		return big.NewInt(int64(val))
-
-	case LittleEndian8Bytes:
-		p := new(big.Int)
-		p.SetBytes(bytes)
-		val := endian.NetToHostUint64(uint64(p.Uint64()))
-		return big.NewInt(int64(val))
-	}
-
-	return nil
-}
 
 /*
+Hash256
 z, sha256(sha256(create a text)) -> 256bits-> 32bytes integer
 */
-
 func Hash256(text string) []byte {
 	hashOnce := sha256.Sum256([]byte(text))
 	hashTwice := sha256.Sum256(hashOnce[:])
@@ -175,16 +119,16 @@ func Hash160(s []byte) []byte {
 func ParseSigBin(sigBin []byte) *Signature {
 	reader := bytes.NewReader(sigBin)
 	bufReader := bufio.NewReader(reader)
-	//first byte should be 0x30
+	//the first byte should be 0x30
 	firstByte := make([]byte, 1)
 	bufReader.Read(firstByte)
 	if firstByte[0] != 0x30 {
 		panic("Bad Signature, first byte is not 0x30")
 	}
-	//second byte is the length of r and s
+	//the second byte is the length of r and s
 	lenBuf := make([]byte, 1)
 	bufReader.Read(lenBuf)
-	//first two byte with the length of r and s should be the total length of sigBin
+	//the first two bytes with the length of r and s should be the total length of sigBin
 	if lenBuf[0]+2 != byte(len(sigBin)) {
 		panic("Bad Signature length")
 	}
@@ -210,7 +154,7 @@ func ParseSigBin(sigBin []byte) *Signature {
 	if marker[0] != 0x02 {
 		panic("signature marker for s is not 0x02")
 	}
-	//following is length of s bin
+	//following is the length of s bin
 	lenBuf = make([]byte, 1)
 	bufReader.Read(lenBuf)
 	sLength := lenBuf[0]

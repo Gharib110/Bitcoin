@@ -43,8 +43,8 @@ func NewFieldElement(order *big.Int, num *big.Int) *FieldElement {
 }
 
 func (f *FieldElement) String() string {
-	return fmt.Sprintf("FieldElement{order: %s, num: %s}\n", f.order.String(),
-		f.num.String())
+	return fmt.Sprintf("FieldElement{order: %x, num: %x}\n", f.order,
+		f.num)
 }
 
 func (f *FieldElement) EqualTo(other *FieldElement) bool {
@@ -89,14 +89,14 @@ func (f *FieldElement) Sub(other *FieldElement) *FieldElement {
 func (f *FieldElement) Mul(other *FieldElement) *FieldElement {
 	f.checkOrder(other)
 
-	//Arithmetic multiply over modular of the order
+	//Arithmetic multiply over modulur of the order
 	var op big.Int
 	mul := op.Mul(f.num, other.num)
 	return NewFieldElement(f.order, op.Mod(mul, f.order))
 }
 
 func (f *FieldElement) Pow(power *big.Int) *FieldElement {
-	//Arithmetic power over modular of the order
+	//Arithmetic power over modulur of the order
 	// k ^(p -1) % p = 1, power > p-1 => power %(p-1)
 	var op big.Int
 	t := op.Mod(power, op.Sub(f.order, big.NewInt(int64(1))))

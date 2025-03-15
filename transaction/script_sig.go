@@ -29,7 +29,7 @@ func InitScriptSig(commands [][]byte) *ScriptSig {
 func NewScriptSig(reader *bufio.Reader) *ScriptSig {
 	var commands [][]byte
 	/*
-		At the beginning is the total length for script field
+		In the beginning is the total length for script field
 	*/
 	scriptLen := ReadVariant(reader).Int64()
 	count := int64(0)
@@ -98,7 +98,7 @@ func (s *ScriptSig) Evaluate(z []byte) bool {
 
 	/*
 		After running all the operations in the scripts and the stack is empty,
-		then evaluation fail, otherwise we check the top element of the stack,
+		then evaluation fails, otherwise we check the top element of the stack,
 		if its value is 0, then fail, if the value is not 0, then success
 	*/
 	if len(s.bitcoinOpCode.stack) == 0 {
@@ -130,7 +130,7 @@ func (s *ScriptSig) rawSerialize() []byte {
 			} else if length >= 0x100 && length <= 520 {
 				/*
 					this is OP_PUSHDATA2 command, we push the command
-					and then two byte for the data length but in little endian format
+					and then two bytes for the data length but in little endian format
 				*/
 				result = append(result, OP_PUSHDATA2)
 				lenBuf := BigIntToLittleEndian(big.NewInt(int64(length)), LittleEndian2Bytes)
@@ -151,7 +151,7 @@ func (s *ScriptSig) Serialize() []byte {
 	rawResult := s.rawSerialize()
 	total := len(rawResult)
 	var result []byte
-	//encode the total length of script at the head
+	//encode the total length of a script at the head
 	result = append(result, EncodeVariant(big.NewInt(int64(total)))...)
 	result = append(result, rawResult...)
 	return result

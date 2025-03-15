@@ -73,8 +73,8 @@ func (p *PrivateKey) Sign(z *big.Int) *Signature {
 
 /*
 Wif
-1, set first byte to 0x80 main-net, 0xef testnet
-2, append the bytes array of private key beside first byte,
+1, set first byte to 0x80 MainNet, 0xef testnet
+2, append the bytes array of private key behind first byte,
 if the length of bytes array < 32 bytes, append leading 0 to 32 bytes
 3, if public SEC compressed, add suffix byte 0x01
 4, do hash256 on result of step 3 and get its first 4 bytes
