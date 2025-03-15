@@ -90,7 +90,7 @@ func ReadVariant(reader *bufio.Reader) *big.Int {
 		3. if the byte following the version is >=0xfe < 0xff
 		read the following 4 bytes as the count of input
 
-		4. if the byte following version is == 0xff, we read the following 8 bytes as the count
+		4. if the byte following version is == 0xff, we read the following 8 bytes as a count
 		of input
 	*/
 	i := make([]byte, 1)

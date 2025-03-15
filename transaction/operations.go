@@ -244,6 +244,7 @@ func NewBitCoinOpCode() *BitCoinOpCode {
 	}
 }
 
+// opNum,
 // OP_0, OP_1, OP_2, push the given value on the top of parsing
 func (b *BitCoinOpCode) opNum(op byte) bool {
 	opNum := byte(0)
@@ -340,9 +341,9 @@ func (b *BitCoinOpCode) opEqualVerify() bool {
 /*
 popStack
 OP_CHECKMULTISIG, structure of the evaluated stack:
-1. number of public keys (2 pubKeys)
-2. public-Key2
-3. public-Key1
+1, number of public keys (2 pubKeys)
+2, publicKey2
+3, publicKey1
 4. number of signatures (1 signature)
 5. signature
 6. []
@@ -430,7 +431,7 @@ func (b *BitCoinOpCode) opCheckSig(zBin []byte) bool {
 			push 0 on the stack
 
 			if the script is using uncompressed sec format for a public key,
-			then the script is called P2PK (pay for a public key)
+			then a script is called P2PK (pay for a public key)
 	*/
 	if len(b.stack) < 2 {
 		return false
@@ -475,7 +476,7 @@ func (b *BitCoinOpCode) opP2sh() bool {
 	//buf fix, remove OP_EQUAL
 	b.RemoveCmd()
 	/*
-		the top element of stack is the content of redeem script, cache it then
+		the top element of stack is the content of the redeem script, cache it then
 		do hash160 on it
 	*/
 	redeemScriptBinary := b.stack[len(b.stack)-1]
@@ -596,8 +597,8 @@ func (b *BitCoinOpCode) EncodeNum(num int64) []byte {
 
 	for absNum > 0 {
 		/*
-					append the last byte of asbNum into a result,
-			        a notice result will be little endian byte array of absNum
+				append the last byte of asbNum into a result,
+			    a notice result will be little endian byte array of absNum
 		*/
 		result = append(result, byte(absNum&0xff))
 		absNum >>= 8

@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"math/big"
 )
@@ -81,7 +82,7 @@ func NewScriptSig(reader *bufio.Reader) *ScriptSig {
 			commands = append(commands, data)
 			count += int64(2 + length.Int64())
 		} else {
-			//it is the data processing instruction
+			//is data processing instruction
 			commands = append(commands, []byte{currentByte})
 		}
 	}
@@ -162,7 +163,7 @@ func (s *ScriptSig) Serialize() []byte {
 	rawResult := s.rawSerialize()
 	total := len(rawResult)
 	result := []byte{}
-	//encode the total length of the script at the head
+	//encode the total length of a script at the head
 	result = append(result, EncodeVariant(big.NewInt(int64(total)))...)
 	result = append(result, rawResult...)
 	return result
@@ -173,4 +174,12 @@ func (s *ScriptSig) Add(script *ScriptSig) *ScriptSig {
 	commands = append(commands, s.bitcoinOpCode.commands...)
 	commands = append(commands, script.bitcoinOpCode.commands...)
 	return InitScriptSig(commands)
+}
+
+func (s *ScriptSig) PrintCmd(idx int) {
+	if idx < 0 || idx >= len(s.bitcoinOpCode.commands) {
+		fmt.Printf("idx out of rang for scriptsig commands")
+	}
+
+	fmt.Printf("%s\n", string(s.bitcoinOpCode.commands[idx]))
 }

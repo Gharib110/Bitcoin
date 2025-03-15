@@ -35,3 +35,48 @@ func TestTwo(t *testing.T) {
 	res := transaction.Verify()
 	fmt.Printf("The evaluation result is %v\n", res)
 }
+
+func TestThree(t *testing.T) {
+	p2shRawData, err := hex.DecodeString("0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8fef4f5dc0559bddfb94e02205a36d4e4e6c7fcd16658c50783e00c341609977aed3ad00937bf4ee942a8993701483045022100da6bee3c93766232079a01639d07fa869598749729ae323eab8eef53577d611b02207bef15429dcadce2121ea07f233115c6f09034c0be68db99980b9a6c5e75402201475221022626e955ea6ea6d98850c994f9107b036b1334f18ca8830bfff1295d21cfdb702103b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7fbdbd4bb7152aeffffffff04d3b11400000000001976a914904a49878c0adfc3aa05de7afad2cc15f483a56a88ac7f400900000000001976a914418327e3f3dda4cf5b9089325a4b95abdfa0334088ac722c0c00000000001976a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da1574e6b3c192ecfb52cc8984ee7b6c568700000000")
+	if err != nil {
+		panic(err)
+	}
+	p2shTransaction := ParseTransaction(p2shRawData)
+	fmt.Printf("p2sh transaction details: %s\n", p2shTransaction)
+	res := p2shTransaction.Verify()
+	fmt.Printf("verify result of p2sh transaction is %v\n", res)
+}
+
+func TestFour(t *testing.T) {
+	blockRawData, err := hex.DecodeString("020000208ec39428b17323fa0ddec8e887b4a7c53b8c0a0a220cfd0000000000000000005b0750fce0a889502d40508d39576821155e9c9e3f5c3157f961db38fd8b25be1e77a759e93c0118a4ffd71d")
+	if err != nil {
+		panic(err)
+	}
+
+	block := ParseBlock(blockRawData)
+	fmt.Printf("block info: %s\n", block)
+	blockSerialized := block.Serialize()
+	fmt.Printf("serialized block data:%x\n", blockSerialized)
+
+	fmt.Printf("is support BIP0009:%v\n", block.Bip9())
+	fmt.Printf("is support BIP0091:%v\n", block.Bip91())
+	fmt.Printf("is support BIP0141:%v\n", block.Bip141())
+
+	//256 bits => 32 bytes, => 64 characters in string
+	fmt.Printf("target value is %064x\n", block.Target())
+	fmt.Printf("difficulty is :%d\n", block.Difficulty().Int64())
+
+	lastBlockRawData, err := hex.DecodeString("00000020fdf740b0e49cf75bb3d5168fb3586f7613dcc5cd89675b0100000000000000002e37b144c0baced07eb7e7b64da916cd3121f2427005551aeb0ec6a6402ac7d7f0e4235954d801187f5da9f5")
+	if err != nil {
+		panic(err)
+	}
+	firstBlockRawData, err := hex.DecodeString("000000201ecd89664fd205a37566e694269ed76e425803003628ab010000000000000000bfcade29d080d9aae8fd461254b041805ae442749f2a40100440fc0e3d5868e55019345954d80118a1721b2e")
+	if err != nil {
+		panic(err)
+	}
+	newTarget := ComputeNewTarget(firstBlockRawData, lastBlockRawData)
+	fmt.Printf("new target is :%064x\n", newTarget.Bytes())
+
+	newBits := TargetToBits(newTarget)
+	fmt.Printf("new bits:%x\n", newBits)
+}

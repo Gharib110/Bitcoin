@@ -209,3 +209,27 @@ func (t *Transaction) Fee() *big.Int {
 	opSub := new(big.Int)
 	return opSub.Sub(inputSum, outputSum)
 }
+
+func (t *Transaction) IsCoinBase() bool {
+	/*
+			1, input count always 1
+		    2, previous transaction id or hash is 32 bytes with all 0s:
+		    3, previous output index is always 0xffffffff
+	*/
+	if len(t.txInputs) != 1 {
+		return false
+	}
+
+	for i := 0; i < 32; i++ {
+		if t.txInputs[0].previousTransactionID[i] != 0x00 {
+			return false
+		}
+	}
+
+	coinBaseIdx := big.NewInt(int64(0xffffffff))
+	if t.txInputs[0].previousTransactionIndex.Cmp(coinBaseIdx) != 0 {
+		return false
+	}
+
+	return true
+}
