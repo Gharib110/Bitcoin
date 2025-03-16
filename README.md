@@ -532,4 +532,190 @@ The value from step 7 is the number of hash values in the list as we mentioned i
 the previous sector.
 
 
+## Bloom Filter
+In the previous section,
+we ask our full-node peer
+to return a ``merkleblock`` command that we can verify whether given transactions of interested(the green boxes)
+are included in a block or not.
+And most of the time we or the client doesn't want the full-node knows which transactions are interested to us,
+therefore, we want to hide our target transactions in a group of transactions (The leafs of the merkle tree).
+Then we need an effective method
+to transfer info about that group of transactions to full-node.That's where the data structure and algorithm of bloom filter comes into play.
 
+There are 1.041 billion of transactions for bitcoin blockchain now,
+how can we quickly select the given several transactions out from 1 billion?
+That's where bloom filter comes into play.
+Bloom filter is
+a kind of data structure used for big data, think about spider of Google crawling web pages,
+given a url how the spider knows whether this page is alread saved on the server of google or not.
+The way of
+doing this is, given the url, we have a group of buckets that are made up of bits, and we have a group of hash functions, the hash functions will hash the given string to the index of a given bucket,
+each time we're using a hash function to hash the url to a given bucket, we check the value of the bucket, 
+if there is one bucket with the value of 0, then the given page with the url is not saved before,
+if all the bucket we visited have the value 1, then we are sure the page is already saved on the server.
+
+
+There is a possibility of false-positive for bloom filter,
+a given page may not save on the server, 
+but the bloom filter gives a positive result which means given the url that its page is not saved on the
+server, but all the buckets we visited have the value of one.
+The possibility of false-positive can be leveraged by enlarging the number of buckets, the more buckets you have,
+the less likely you will have
+a false positive.
+
+
+We have bloom filter and create ``filterload`` command to send info about the filter to the full node.
+We still need another command name ``getdata`` to request filtered
+block from the full node, a filtered block is asking full node to throw transactions to the filter we sent to it and include any transactions that can be matched by the filter(all
+buckets have value 1), then put all those filtered transactions into ``merkleblock`` command.
+
+Let's have a look at the payload of ``getdata`` and put it into fields:
+
+020300000030eb2540c41025690160a1014c577061596e32e426b712c7ca00000000000000030000001049847939585b0652fba793661c361223446b6fc41089b8be00000000000000
+
+1. At the beginning its variant, the value in the above data is 0x2 then we only need to get one byte.
+
+2. The following four bytes is type of data item in little endian format: 03000000
+(tx: 01000000, block: 02000000, filtered block: 03000000, compact block 04000000)
+
+3. the following 32 bytes are hash identifier:
+30eb2540c41025690160a1014c577061596e32e426b712c7ca00000000000000030000001049847939585b0652fba793661c361223446b6fc41089b8be00000000000000
+
+In the payload of ``getdata`` message, if we set the type field to value 3,
+then we are asking the full node to return ``merkleblock`` command.
+
+
+## Segwit
+In the previous section of talking about transaction, we have seen some transactions have a bit of segwit set to one.
+That indicates such transactions is a kind of "segregated witness" transaction, it is an
+upgrade of the traditional transaction, and now it is almost the mainstream transaction.
+In this section, we will go into the details of segwit transaction.
+
+There are many benefits brought by segwit transaction compare with the old style transaction:
+
+1. Block size increase
+
+2. Transaction malleability fix
+
+3. segwit versioning for clear upgrade paths
+
+4. quadratic hashing fix
+
+5. offline wallet fee calculation security
+
+The list above is not easy to understand,
+we may understand them
+after we going to the details of segwit transaction that is pay-to-witness-pubKey-hash transaction
+(p2wpkh).
+We have seen the
+pay-to-pubKey-hash transaction(p2pkh) before, and p2wpkh is an upgrade for p2pkh.
+In p2pkh, we combine instructions with data together, but in p2wpkh transaction, we seperate data in ScriptSig to
+its own witness field.
+
+
+There is a jargon word "transaction malleability";
+it is the ability to change the transaction id without changing the transaction's intention.
+The malleability of transaction ID will brighten many
+security breaks for creation of a payment channel,
+as we know transaction id is the hash result for content of the transaction,
+if any data changed in the transaction and the hash will be invalid.
+But it is possible that the scirptSig field changed for the transaction input
+may keep the transaction hash remain the same,
+because this field will be cleared before computing the transaction
+hash.
+
+
+Therefore, changing the ScriptSig field for transaction input will not affect the transaction hash result.
+If the transaction data can be changed without affecting its hash result, then the uniqueness
+of a transaction will not be guaranteed by the hash id.
+In order to mitigate the problem, bring by emptying ScriptSig field when computing the hash,
+p2wpkh transaction will separate data from the scriptSig 
+field and put it into another field.
+
+
+Let's have a look at segwit transaction:
+```ggg
+010000000115e180dc28a2327e687facc33f10f2a20da717e5548406f7ae8b4c811072f8560100000000ffffffff0100b4f505000000001976a9141d7cd6c75c2e86f4cbf98eaed221b30bd9a0b92888ac00000000
+```
+
+1. the first four bytes in little endian format is version: ``01000000``
+
+2. the following field is variant it is the count of input: ``0x01``
+
+3. the following 32 bytes in little endian is previous transaction hash:
+``15e180dc28a2327e687facc33f10f2a20da717e5548406f7ae8b4c811072f856``
+
+4. the following four bytes in little endian is previous transaction index: ``01000000``
+
+5. the following one byte 0x00 is scriptSig
+
+6. the following four bytes in little endian is sequence number: ``ffffffff``
+
+7. the following is variant for the count of output: ``0x01``
+
+8. the following 8 bytes in little endian is output amount: ``0b4f50500000000``
+
+9. the following data chunk is ScriptPubKey: ``1976a9141d7cd6c75c2e86f4cbf98eaed221b30bd9a0b92888ac``
+
+10. the last four byte in little endian is lock-time: ``00000000``
+
+Let's check the same transaction with segwit upgrade:
+
+``0100000000010115e180dc28a2327e687facc33f10f2a20da717e5548406f7ae8b4c811072f8560100000000ffffffff0100b4f505000000001976a9141d7cd6c75c2e86f4cbf98eaed221b30bd9a0b92888ac02483045022100df7b7e5cda14ddf91290e02ea10786e03eb11ee36ec02dd862fe9a326bbcb7fd02203f5b4496b667e6e281cc654a2da9e4f08660c620a1051337fa8965f727eb19190121038262a6c6cec93c2d3ecd6c6072efea86d02ff8e3328bbd0242b20af3425990ac00000000``
+
+1. the first four bytes in little endian is version: ``01000000``
+
+2. the following one byte is segwit marker: ``00``
+
+3. the following one byte is segwit flag: ``01``
+
+4. the following field is variant for input count: ``01``
+
+5. the following 32 bytes in little endian is previous transaction hash:
+``15e180dc28a2327e687facc33f10f2a20da717e5548406f7ae8b4c811072f856``
+
+6. the following 4 bytes in little endian is previous transaction index: ``01000000``
+
+7. the following one byte is scriptSig: ``00``
+
+8. the following 4 bytes in little endian format is sequence: ``ffffffff``
+
+9. the following variant is number of output: ``01``
+
+10. the following 8 bytes in little endian is output amount: ``00b4f50500000000``
+
+11. the following chunk is scriptPubKey: ``1976a9141d7cd6c75c2e86f4cbf98eaed221b30bd9a0b92888ac``
+
+12. the following data chunk is witness:
+``02483045022100df7b7e5cda14ddf91290e02ea10786e03eb11ee36ec02dd862fe9a326bbcb7fd02203f5b4496b667e6e281cc654a2da9e4f08660c620a1051337fa8965f727eb19190121038262a6c6cec93c2d3ecd6c6072efea86d02ff8e3328bbd0242b20af3425990ac``
+
+do the following for each input:
+----> 1, the first field is variant, it is a number of items: 0x02
+-----> item:
+-----> variant, length of item
+-----> content of item
+
+13. the last four bytes in little endian is lock-time: 00000000
+
+
+Compare with p2pkh transaction the p2wpkh has three more fields: segwit marker, segwit flag, and witness.
+The field of witness contains tow fields: signature and pubKey.
+And the scriptPubKey will contain
+two parts, one is instruction OP_0, the second is 20 bytes hash.
+
+
+when executing the script, the first instruction will push 0 onto the stack,
+then a 20-byte hash will push to stack.
+
+
+
+For older version of full-node that can not handle segwit transaction,
+it will stop here since there is nothing for the script,
+and the top element on the stack is not 0 and the result can be seen as
+success.
+Nodes capable of handing segwit transaction, it will notice the pattern that is OP_0 <20-byte hash>,
+it will take the pubKey and signature from witness field and reconstruct the script.
+
+
+Now we can handle the script as before, and when executing the OP_HASH160, we will put the hash result and the 20 byte hash both on to the stack, and if the OP_EQUALVERIFY will check their match and
+the OP_CHECKSIG will check the signature is valid or not, if they are all success, there would be value 1 on the stack.
