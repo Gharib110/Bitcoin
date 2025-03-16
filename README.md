@@ -210,7 +210,7 @@ The question is how to make a given number of zeros appear at the beginning of h
 This is where the nonce comes in.
 The miner can manipulate
 this field to generate the hash to meet the requirement.
-Since there are 4 bytes for the nonce field,
+Since there are four bytes for the nonce field,
 which means the miner can try 2^32 times to get the required hash.
 
 
@@ -294,13 +294,13 @@ these four bytes appear together, then you should know this is the beginning for
    And this number used to
 differentiate the main-net with testnet, for testnet, the four bytes are 0b110907.
 
-2. the following 12 bytes are called command: ``76657273696f6e0000000000``,
+2. the following twelve bytes are called command: ``76657273696f6e0000000000``,
    it used to describe the purpose of this packet.
    It can be human-readable string.
 
-3. the following 4 bytes: ``65000000`` it is a payload length in little endian format,
+3. the following four bytes: ``65000000`` it is a payload length in little endian format,
 
-4. the following 4 bytes: ``5f1a69d2`` is the first 4 bytes of hash256 of the payload.
+4. the following four bytes: ``5f1a69d2`` is the first 4 bytes of hash256 of the payload.
 
 5. the following bytes are data of the payload
 
@@ -336,4 +336,200 @@ Let's dissect the above data chunk into fields as following:
 
 All zeros here mean we want to get as block headers as many as possible, but the maximum number we can get is 2000,
 which is almost a difficulty adjustment period (2016 blocks).
+
+
+## Merkel Tree
+All kinds of blockchain suffer a common weakness that is shortage of disk volume, computing power and bandwidth,
+bitcoin blockchain is not an exception.
+This causes problems when you want to check the data
+integrity, you may need to wait for a long time to download the necessary data for a simple checking.
+For example, when we're using bitcoin for trading, you pay your goods or services with bitcoins, the
+paying record needs to append to the bitcoin chain.
+
+
+In order to verify that your transaction is recorded on the chain,
+you may need to sync the whole chain down to your device,
+this may need weeks and of course unacceptable.
+
+Therefore, we need some algorithm
+to quickly verify that the given info is already on the chain.
+To make sure some data in a block and exist on the chain is called proof-of-inclusion.
+
+
+Merkle tree is a kind of data structure used to verify the integrity of a group of objects,
+in blockchain it is used to verify transactions
+in block, the objects in the group are ordered, then we can use the following steps to construct merkle tree:
+
+1. Hash each object in the group using given hash function.
+
+2. If there is only one object to be hashed, then it is after the hash of the process is completed.
+
+3. if there is an odd number of objects, then after hashing them all,
+we copy the last hash result and add it to the hashed list
+then we have even numbed of hash values in the list.
+
+4. we select a pair of hash results in order,
+hash the pair and use the result as their parent, this step will half the number of items in the second layer.
+
+5. goto step 2
+
+This is somehow like a reverse of a binary tree, we begin from the lowest level,
+then select two leaves and construct their parent until
+we go to the root.
+
+
+The process is just like divide and conquer, if there are too many objects, hash them together is impossible, 
+then we can divide the group into two, 
+and try to hash each half group then combine the two hash results to produce the top hash, 
+if the subgroup is still too large,
+then we continue to divide them until we get only one object, 
+then we collect the lower level hash to produce the up lever hash.
+
+
+We can abstract the process as following:
+H: hash function
+P: parent hash
+L: left hash
+R: right hash
+
+Then ``P = H(L || R)``, (|| means connecting R to the end of L).
+
+If someone wants to proof L is included in P, then they can provide R and P,
+then we compute L, then connect L and R to compute the hash and check the result is P or not.
+
+
+Using merkle tree, we can achieve proof of inclusion, for example, you have a list of objects , 
+and you want to check your peer has the same set of objects, then you compute the merkle root on L and
+let the peer compute the merkle root, then you compare two roots, if they are the same, 
+then it is proof your peer also have the same list of objects.
+In application to the bitcoin, if we want to know
+whether a batch of transactions has included in the block or not,
+we can compute the merkle root instead of getting all transactions from the block and checking them one by one.
+
+
+If we have two transactions ``H(k), H(N)``,
+and we want to make sure whether these two transactions have already been included in a block, 
+then the bitcoin full node can only return hashes that are represented by the
+blue box.
+We can compute the merkle root for a check in the following step:
+
+1. ``H(KL) = MerkleParent(H(k), H(L))``
+
+2. ``H(MN) = MerkleParent(H(M), H(N))``
+
+3. ``H(IJKL) = MerkleParent(H(IJ), H(KL))``
+
+4. ``H(MNOP) = MerkleParent(H(MN), H(OP))``
+
+5. ``H(IJKLMNOP) = MerkleParent(H(IJKL), H(MNOP))``
+
+6. ``H(ABCDEFGHIJKLMNOP) = MerkleParent(H(ABCDEFGH), H(IJKLMNOP))``
+
+
+As we can see, the merkle root is a kind of compression algorithm;
+we need only part of the information can we get to the conclusion.
+But we still have problems with the above computation, How do we know we
+need to pair H(k), H(L) to get the merkle parent, how do we know we need to pair H(NM), H(OP) to get merkle parent?
+We need some info th deduce such info.
+
+
+The info we need is the position of those blue boxes,
+and we need to define the "position" of the box in the binary tree structure.
+The "position" of a node in a tree related to how
+we "travel" the tree, if you have background of basic data structure and algorithm, 
+you will know there is a kind of data structure called "graph", the tree above is binary tree, and it is a kind of graph.
+
+
+For graph which contains "nodes and edges," if given one node,
+we can go to other nodes by using the edges coming from the given node,
+then we have two kinds of ways to "travel" the graph, breathe first
+and depth first.
+
+
+As you can see from the image above, for breath first travel, we visit the node layer by layer, we first at the root node 0, then we visit all nodes below it that are node 1, 2, 3, then we goto layer 2,
+visit all nodes there that are nodes 4,5,6,7.
+The order for each node that they are visited is their "position."
+The depth-first travel will be a little bit complex, when we in a given node, we first check
+if we can go to the lower layer from the left edge, if we can, then we go down to the lower layer.
+If we can't go down to the lowe layer from the left edge(there is not left edge, or we have already been there),
+then we try whether we can go down by using the right edge, if we can then we go down to the lowe layer by using the right edge.
+Otherwise, we go up to the parent node and do the same again, the order for
+the node that is being visited is the "position" of that node,
+you can see nodes will have different order or "position" for these two travel ways.
+
+
+When the full node returns hashes for the blue boxes, it will also return their order under the depth-first travel,
+then we will use the order and the given hash value to reconstruct the merkle root.
+Let's go through the whole process step by step:
+
+
+the first step we need to achieve is given a list of objects, we need to convert it to tree like structure.
+
+
+As you can see from the above image, we have 8 nodes in the list. 
+if we want to construct a merkle tree from these 8 nodes, 
+we can set these 8 nodes as the leaves, and pair two as a group then "grow"
+its parent, therefore for 8 nodes, we can "grow out" 4 parents in the second layer, 
+the same process can repeat again and again until we have only one node. 
+Since the number of nodes is half when it comes up to one layer, given N nodes, we can have most int(lg(N)+1) layers.
+
+
+## Merkel Block
+
+We have built up merkle tree in the previous section,
+in this section we will see how to use the tree to verify proof-of-inclusion in bitcoin blockchain.
+As we have shown in the previous section,
+When we get a list of hashes, we can build up the merkle tree and get the root value.
+The question is how we get those lists of hash values, actually we can send a ``getdata`` command with
+given transaction hash to a full node, then it will respond with a ``merkleblock`` command,
+and a list of hash values will be contained in the body of command.
+
+First, we check an example of ``merkleblock`` command.
+
+Following is the binary data of the body of ``merkleblock`` command:
+```ggg
+00000020df3b053dc46f162a9b00c7f0d5124e2676d47bbe7c5d0793a500000000000000ef445fef2ed495c275892206ca533e7411907971013ab83e3b47bded692d14d4dc7c835b
+67d8001ac157e670bfOd00000aba412a0d1480e370173072c9562becffe87aa661c1e4a6dbc305d38ec5dc088a7cf92e6458aca7b32edae818f9c2c98c37e06bf72ae0ce80649a386
+55ee1e27d34d9421d940b16732f24b94023e9d572a7f9ab8023434a4feb532d2adfc8c2c2158785d1bd04eb99df2e86c54bc13e139862897217400def5d72c280222c4cbaee7261831
+e1550dbb8fa82853e9fe506fc5fda3f7b919d8fe74b6282f92763cef8e625f977af7c8619c32a369b832bc2d051ecd9c73c51e76370ceabd4f25097c256597fa898d404ed53425de608
+ac6bfe426f6e2bb457f1c554866eb69dcb8d6bf6f880e9a59b3cd053e6c7060eeacaacf4dac6697dac20e4bd3f38a2ea2543d1ab7953e3430790a9f81e1c67f5b58c825acf46bd02848
+384eebe9af917274cdfbb1a28a5d58a23a17977defode10d644258d9c54f886d47d293a411cb6226103b55635
+```
+
+Let's put the chunk of binary data above into fields:
+
+1. the first 4 bytes in little endian format is version number: ``0000002``
+
+2. the following 32 bytes in little endian format is id of previous block:
+``0df3b053dc46f162a9b00c7f0d5124e2676d47bbe7c5d0793a500000000000000``
+
+3. the following 32 bytes in little endian format is value of merkle root:
+``ef445fef2ed495c275892206ca533e7411907971013ab83e3b47bded692d14d4``
+
+4. the following four bytes in little endian format is timestamp: ``dc7c835b``
+
+5. the following four bytes is named bits: ``67d8001a``
+
+6. the following four bytes is named nonce: ``c157e670``
+
+7. the following four bytes in little endian format is number of total transactions: ``bfOd0000``
+
+8. the following 1 byte is variant int, the number of hashes: 0a
+
+9. the following chunk of data are hash values of all transactions, its length is 32 * value from step 7:
+```ggg
+ba412a0d1480e370173072c9562becffe87aa661c1e4a6dbc305d38ec5dc088a7cf92e6458aca7b32edae818f9c2c98c37e06bf72ae0ce80649a386
+55ee1e27d34d9421d940b16732f24b94023e9d572a7f9ab8023434a4feb532d2adfc8c2c2158785d1bd04eb99df2e86c54bc13e139862897217400def5d72c280222c4cbaee7261831
+e1550dbb8fa82853e9fe506fc5fda3f7b919d8fe74b6282f92763cef8e625f977af7c8619c32a369b832bc2d051ecd9c73c51e76370ceabd4f25097c256597fa898d404ed53425de608
+ac6bfe426f6e2bb457f1c554866eb69dcb8d6bf6f880e9a59b3cd053e6c7060eeacaacf4dac6697dac20e4bd3f38a2ea2543d1ab7953e3430790a9f81e1c67f5b58c825acf46bd02848
+384eebe9af917274cdfbb1a28a5d58a23a17977defode10d644258d9c54f886d47d293a411cb622610
+```
+
+10. the final four bytes are named flag bits: 3b55635
+
+The first six fields are the same as ``getheader`` command, the last four fields are use for proof-of-inclusion.
+The value from step 7 is the number of hash values in the list as we mentioned in
+the previous sector.
+
+
 
