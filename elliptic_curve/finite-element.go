@@ -10,7 +10,7 @@ type FieldElement struct {
 	num   *big.Int //value of the given element in the field
 }
 
-// overflow 64-bits integer
+// overflow 64 bits integer
 //huge number ,  +, *, ^ => overflow 64bits, we use large or big number
 //
 
@@ -79,7 +79,7 @@ func (f *FieldElement) Negate() *FieldElement {
 
 func (f *FieldElement) Sub(other *FieldElement) *FieldElement {
 	/*
-		a b elements of the finite set, c = a - b, given b how can we find c,
+		a b element of the finite set, c = a - b, given b how can we find c,
 		(b + c) % order = a, a - b => (a + (-b) ) % order
 	*/
 
@@ -141,7 +141,7 @@ func (f *FieldElement) Sqrt() *FieldElement {
 	return f.Pow(opDiv.Div(orderAddOne, big.NewInt(int64(4))))
 }
 
-func (f *FieldElement) Div(other *FieldElement) *FieldElement {
+func (f *FieldElement) Divide(other *FieldElement) *FieldElement {
 	f.checkOrder(other)
 	//a / b => a . b^(p-2)
 	var op big.Int

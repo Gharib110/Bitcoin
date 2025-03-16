@@ -12,7 +12,7 @@ import (
 type GetHeaderMessage struct {
 	command    string
 	version    *big.Int
-	numbHashes *big.Int
+	numHashes  *big.Int
 	startBlock []byte
 	endBlock   []byte
 }
@@ -30,7 +30,7 @@ func NewGetHeaderMessage(startBlock []byte) *GetHeaderMessage {
 	return &GetHeaderMessage{
 		command:    "getheaders",
 		version:    big.NewInt(70015),
-		numbHashes: big.NewInt(1),
+		numHashes:  big.NewInt(1),
 		startBlock: startBlock,
 		endBlock:   make([]byte, 32),
 	}
@@ -43,7 +43,7 @@ func (g *GetHeaderMessage) Command() string {
 func (g *GetHeaderMessage) Serialize() []byte {
 	result := make([]byte, 0)
 	result = append(result, tx.BigIntToLittleEndian(g.version, tx.LittleEndian4Bytes)...)
-	result = append(result, tx.EncodeVariant(g.numbHashes)...)
+	result = append(result, tx.EncodeVariant(g.numHashes)...)
 	result = append(result, tx.ReverseByteSlice(g.startBlock)...)
 	result = append(result, tx.ReverseByteSlice(g.endBlock)...)
 	return result

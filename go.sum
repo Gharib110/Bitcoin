@@ -1,3 +1,5 @@
+github.com/spaolacci/murmur3 v1.1.0 h1:7c1g84S4BPRrfL5Xrdp6fOJ206sU9y293DDHaoy0bLI=
+github.com/spaolacci/murmur3 v1.1.0/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/tsuna/endian v0.0.0-20151020052604-29b3a4178852 h1:/HMzghBx/U8ZTQ+CCKRAsjeNNV12OCG3PfJcthNMBU0=
 github.com/tsuna/endian v0.0.0-20151020052604-29b3a4178852/go.mod h1:7SvkOZYNBtjd5XUi2fuPMvAZS8rlCMaU69hj/3joIsE=
 golang.org/x/crypto v0.36.0 h1:AnAEvhDddvBdpY+uR+MyHmuZzzNqXSe/GvuDeob5L34=

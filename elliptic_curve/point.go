@@ -27,7 +27,8 @@ type Point struct {
 func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *FieldElement {
 	/*
 			why do we need to bring operation on big.Int into one function?
-		    try the following =>
+		    try the following Code segment
+
 			var opAdd big.Int
 			res := opAdd.Add(big.NewInt(int64(1)), big.NewInt(int64(2)))
 			opAdd.Add(big.NewInt(int64(3)), big.NewInt(int64(4)))
@@ -49,7 +50,7 @@ func OpOnBig(x *FieldElement, y *FieldElement, scalar *big.Int, opType OpType) *
 		}
 		panic("error in multiply")
 	case DIV:
-		return x.Div(y)
+		return x.Divide(y)
 	case EXP:
 		if scalar == nil {
 			panic("scalar should not be nil for EXP")
@@ -87,12 +88,12 @@ func (p *Point) Verify(z *FieldElement, sig *Signature) bool {
 			    1, compute u = z/s, v=r/s,
 				2, compute u*G + v*P = (z/s)*G + (r/s)*P = (z/s)*G+(r/s)*eG
 					=(z/s)*P + (r*e/s)*G = ((z+r*e)/s))*G = k*G = R'
-				3, take the x coordinate of R compare with r
+				3, take the x coordinate of R' compare with r
 					if the same => verify the message z is created by owner of e
 
-				notice we have shown that n * G is identity, therefore,
-		        the above computation related to z, s, r, e need to do based on module of n,
-		        and remember the operator "/" is not the normal arithmetic divide, its inverse of multiplication.
+				notice we have shown that n * G is identity, therefore the above computation related to z, s, r, e
+		        needs to do based on module of n, and remember the operator
+				"/" is not the normal arithmetic divide, it is the inverse of multiplication.
 	*/
 	sInverse := sig.s.Inverse()
 	u := z.Mul(sInverse)
@@ -118,7 +119,7 @@ func NewEllipticPoint(x *FieldElement, y *FieldElement, a *FieldElement, b *Fiel
 	ax := OpOnBig(a, x, nil, MUL)
 	right := OpOnBig(OpOnBig(x3, ax, nil, ADD), b, nil, ADD)
 	//if x and y are nil, then its identity point, and
-	//we don't need to check it on a curve
+	//we don't need to check it on the curve
 	if left.EqualTo(right) != true {
 		err := fmt.Sprintf("point:(%v, %v) is not on the curve with a: %v, b:%v\n", x, y, a, b)
 		panic(err)

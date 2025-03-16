@@ -14,6 +14,8 @@ type TransactionInput struct {
 	scriptSig                *ScriptSig
 	sequence                 *big.Int
 	fetcher                  *TransactionFetcher
+	//add new here
+	witness [][]byte
 }
 
 func InitTransactionInput(previousTx []byte, previousIndex *big.Int) *TransactionInput {
@@ -69,7 +71,7 @@ func NewTractionInput(reader *bufio.Reader) *TransactionInput {
 
 	transactionInput.scriptSig = NewScriptSig(reader)
 
-	//last four bytes for a sequence
+	//last four bytes for the sequence
 	seqBytes := make([]byte, 4)
 	//bug fix, io.ReadFull
 	//reader.Read(seqBytes)
@@ -125,7 +127,7 @@ func (t *TransactionInput) isP2sh(script *ScriptSig) bool {
 
 func (t *TransactionInput) ReplaceWithScriptPubKey(testnet bool) {
 	/*
-		if it is a P2SH transaction, we use a redeem script to replace the
+		if it is a P2SH transaction, we use the redeem script to replace the
 		scriptSig of the current input
 	*/
 	script := t.scriptPubKey(testnet)

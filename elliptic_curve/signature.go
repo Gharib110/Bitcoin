@@ -21,7 +21,7 @@ func (s *Signature) String() string {
 }
 
 /*
-DER:
+Der
 1. set the first byte to 0x30
 
 2, second byte is the total length of s and r
@@ -52,7 +52,6 @@ the first byte of s is 7a < 0x80, we don't insert 0x00 at the beginning
 
 s: 7a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed
 */
-
 func (s *Signature) Der() []byte {
 	rBin := s.r.num.Bytes()
 	//if the first byte >= 0x80, append 0x00 at the beginning

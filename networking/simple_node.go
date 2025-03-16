@@ -2,7 +2,10 @@ package networking
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
+	"github.com/Gharib110/Bitcoin/bloom-filter"
+	"github.com/Gharib110/Bitcoin/merkle-tree"
 	"net"
 	"time"
 )
@@ -40,7 +43,49 @@ func (s *SimpleNode) Run() {
 	}
 	s.WaitFor(conn)
 
-	s.GetHeaders(conn)
+	s.GetData(conn)
+}
+
+func (s *SimpleNode) GetData(conn net.Conn) {
+	//prepare the bloom filter,
+	txHash, err := hex.DecodeString("1df77b894e1910628714bb73df59e20fb9114f9dcc051d8c03ca197dd112cc8a")
+	if err != nil {
+		panic(err)
+	}
+	bf := bloomfilter.NewBloomFilter(30, 5, 90210)
+	//set up the bloom filter map the transaction hash into buckets
+	bf.Add(txHash)
+	//send filterload command to fullnode
+	s.Send(conn, bf.FilterLoadMsg())
+	getData := bloomfilter.NewGetDataMessage()
+	receiveMerkleBlock := false
+	/*
+		    ask full node to search all transactions in the given block with the given id,
+			put all those transactions in the block through the filter we sent by using
+			the filterload command, then collect all transactions that can pass through the
+			filter and put them in to merkleblock command
+	*/
+	blockHash, err := hex.DecodeString("0000000000000138f016a6fc1666fd667b7d282d65ad14b7f0b16a75a2e90e50")
+	getData.AddData(bloomfilter.FilteredDataType(), blockHash)
+	s.Send(conn, getData)
+
+	for !receiveMerkleBlock {
+		time.Sleep(2 * time.Second)
+		messages := s.Read(conn)
+		for i := 0; i < len(messages); i++ {
+			msg := messages[i]
+			fmt.Printf("receiving command %s\n", msg.command)
+			command := string(bytes.Trim(msg.command, "\x00"))
+
+			if command == "merkleblock" {
+				merkleBlock := merkletree.ParseMerkleBlock(msg.payload)
+				fmt.Printf("merkleblock received: %s\n", merkleBlock)
+				fmt.Printf("merkleblock valid: %v\n", merkleBlock.IsValid())
+				receiveMerkleBlock = true
+			}
+		}
+	}
+
 }
 
 func (s *SimpleNode) GetHeaders(conn net.Conn) {
@@ -51,9 +96,9 @@ func (s *SimpleNode) GetHeaders(conn net.Conn) {
 	for !receivedGetHeader {
 		//let the peer have a rest
 		time.Sleep(2 * time.Second)
-		msgs := s.Read(conn)
-		for i := 0; i < len(msgs); i++ {
-			msg := msgs[i]
+		messages := s.Read(conn)
+		for i := 0; i < len(messages); i++ {
+			msg := messages[i]
 			fmt.Printf("receiving command:%s\n", msg.command)
 			command := string(bytes.Trim(msg.command, "\x00"))
 			if command == "headers" {
@@ -95,21 +140,21 @@ func (s *SimpleNode) Read(conn net.Conn) []*NetworkEnvelope {
 		the peer node may return a version and verack
 		at once
 	*/
-	var msgs []*NetworkEnvelope
+	var messages []*NetworkEnvelope
 	parsedLen := 0
 	for {
 		if parsedLen >= totalLen {
 			break
 		}
 		msg := ParseNetwork(receivedBuf, s.testnet)
-		msgs = append(msgs, msg)
+		messages = append(messages, msg)
 		if parsedLen < totalLen {
 			parsedLen += len(msg.Serialize())
 			receivedBuf = receivedBuf[len(msg.Serialize()):]
 		}
 	}
 
-	return msgs
+	return messages
 }
 
 func (s *SimpleNode) WaitFor(conn net.Conn) {
@@ -118,9 +163,9 @@ func (s *SimpleNode) WaitFor(conn net.Conn) {
 	verackReceived := false
 	versionReceived := false
 	for !verackReceived || !versionReceived {
-		msgs := s.Read(conn)
-		for i := 0; i < len(msgs); i++ {
-			msg := msgs[i]
+		messages := s.Read(conn)
+		for i := 0; i < len(messages); i++ {
+			msg := messages[i]
 			command := string(bytes.Trim(msg.command, "\x00"))
 			fmt.Printf("command:%s\n", command)
 			if command == "verack" {

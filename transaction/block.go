@@ -19,7 +19,7 @@ type Block struct {
 }
 
 const (
-	TwoWeeks = 60 * 60 * 24 * 14
+	TWO_WEEKS = 60 * 60 * 24 * 14
 )
 
 func ComputeNewTarget(firstBlockBytes []byte, lastBlockBytes []byte) *big.Int {
@@ -34,16 +34,16 @@ func ComputeNewTarget(firstBlockBytes []byte, lastBlockBytes []byte) *big.Int {
 
 	var opSub big.Int
 	timeDifferential := opSub.Sub(lastBlockTime, firstBlockTime)
-	if timeDifferential.Cmp(big.NewInt(TwoWeeks*4)) > 0 {
-		timeDifferential = big.NewInt(TwoWeeks * 4)
+	if timeDifferential.Cmp(big.NewInt(TWO_WEEKS*4)) > 0 {
+		timeDifferential = big.NewInt(TWO_WEEKS * 4)
 	}
-	if timeDifferential.Cmp(big.NewInt(TwoWeeks/4)) < 0 {
-		timeDifferential = big.NewInt(TwoWeeks / 4)
+	if timeDifferential.Cmp(big.NewInt(TWO_WEEKS/4)) < 0 {
+		timeDifferential = big.NewInt(TWO_WEEKS / 4)
 	}
 
 	var opMul big.Int
 	var opDiv big.Int
-	newTarget := opDiv.Div(opMul.Mul(lastBlock.Target(), timeDifferential), big.NewInt(TwoWeeks))
+	newTarget := opDiv.Div(opMul.Mul(lastBlock.Target(), timeDifferential), big.NewInt(TWO_WEEKS))
 	return newTarget
 }
 

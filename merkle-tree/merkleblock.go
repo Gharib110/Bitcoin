@@ -5,15 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Gharib110/Bitcoin/transaction"
+	"golang.org/x/example/hello/reverse"
 	"math/big"
 	"strings"
-
-	"golang.org/x/example/hello/reverse"
 )
 
 /*
-command : merkle-block
-binary for command of merkle-block:
+command : merkleblock
+binary for command of merkleblock:
 00000020
 
 df3b053dc46f162a9b00c7f0d5124e2676d47bbe7c5d0793a500000000000000
@@ -60,7 +59,7 @@ ef445fef2ed495c275892206ca533e7411907971013ab83e3b47bd0d692d14d4
 7, 4 bytes in LE is number of total transaction of the block that contains the
 given transaction: bf0d0000
 
-8, variant int: number of hashes, blue boxes:0a
+8, varint int: number of hashes, blue boxes:0a
 
 9, following chunk of data are hash values of the blue boxes:
 ba412a0d1480e370173072c9562becffe87aa661c1e4a6dbc305d38ec5dc088a7cf92e6458aca7b32edae818f9c2c
@@ -87,7 +86,7 @@ type MerkleBlock struct {
 	bits              []byte
 	nonce             []byte
 	totalTransactions *big.Int
-	numHashes         *big.Int
+	numHahses         *big.Int
 	hashes            [][]byte
 	flagBits          []byte
 }
@@ -98,7 +97,7 @@ func ErrorPanic(err error, msg string) {
 	}
 }
 
-// BytesToBitsField convert bytes to bits
+// convert bytes to bits
 func BytesToBitsField(bytes []byte) []string {
 	flagBits := make([]string, 0)
 	for _, byteVal := range bytes {
@@ -148,7 +147,7 @@ func ParseMerkleBlock(payload []byte) *MerkleBlock {
 	merkleBlock.totalTransactions = transaction.LittleEndianToBigInt(total, transaction.LittleEndian4Bytes)
 
 	numHashes := transaction.ReadVariant(bufReader)
-	merkleBlock.numHashes = numHashes
+	merkleBlock.numHahses = numHashes
 
 	hashes := make([][]byte, 0)
 	for i := 0; i < int(numHashes.Int64()); i++ {
@@ -178,8 +177,8 @@ func (m *MerkleBlock) String() string {
 	result = append(result, fmt.Sprintf("bits: %s", bitsString))
 	result = append(result, fmt.Sprintf("nonce: %x", m.nonce))
 	result = append(result, fmt.Sprintf("total tx:%x", m.totalTransactions))
-	result = append(result, fmt.Sprintf("number of hashes:%d", m.numHashes.Int64()))
-	for i := 0; i < int(m.numHashes.Int64()); i++ {
+	result = append(result, fmt.Sprintf("number of hashes:%d", m.numHahses.Int64()))
+	for i := 0; i < int(m.numHahses.Int64()); i++ {
 		result = append(result, fmt.Sprintf("%x", m.hashes[i]))
 	}
 

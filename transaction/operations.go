@@ -125,6 +125,7 @@ const (
 )
 
 const (
+
 	/*
 	   this is not a bitcoin script command, it is defined by ourselves,
 	   if we encounter the P2SH pattern on the script stack, that is the
@@ -135,14 +136,15 @@ const (
 	OP_P2SH = 254
 )
 
-type BitCoinOpCode struct {
+type BitcoinOpCode struct {
 	opCodeNames map[int]string
 	stack       [][]byte
 	altStack    [][]byte
 	commands    [][]byte
+	witness     [][]byte
 }
 
-func NewBitCoinOpCode() *BitCoinOpCode {
+func NewBitCoinOpCode() *BitcoinOpCode {
 	opCodeNames := map[int]string{
 		0:   "OP_0",
 		76:  "OP_PUSHDATA1",
@@ -236,7 +238,7 @@ func NewBitCoinOpCode() *BitCoinOpCode {
 		184: "OP_NOP9",
 		185: "OP_NOP10",
 	}
-	return &BitCoinOpCode{
+	return &BitcoinOpCode{
 		opCodeNames: opCodeNames,
 		stack:       make([][]byte, 0),
 		altStack:    make([][]byte, 0),
@@ -245,7 +247,7 @@ func NewBitCoinOpCode() *BitCoinOpCode {
 }
 
 // OP_0, OP_1, OP_2, push the given value on the top of parsing
-func (b *BitCoinOpCode) opNum(op byte) bool {
+func (b *BitcoinOpCode) opNum(op byte) bool {
 	opNum := byte(0)
 	if op >= OP_1 && op <= OP_16 {
 		opNum = (op - OP_1) + 1
@@ -258,7 +260,10 @@ func (b *BitCoinOpCode) opNum(op byte) bool {
 isP2sh
 check the patter for P2SH
 */
-func (b *BitCoinOpCode) isP2sh() bool {
+func (b *BitcoinOpCode) isP2sh() bool {
+	if len(b.commands) == 0 {
+		return false
+	}
 	/*
 		the command stack has three elements; first is OP_HASH160, second is data chunk,
 		the third is OP_EQUAL
@@ -278,7 +283,7 @@ func (b *BitCoinOpCode) isP2sh() bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opDup() bool {
+func (b *BitcoinOpCode) opDup() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -287,7 +292,7 @@ func (b *BitCoinOpCode) opDup() bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opHash160() bool {
+func (b *BitcoinOpCode) opHash160() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -299,7 +304,7 @@ func (b *BitCoinOpCode) opHash160() bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opEqual() bool {
+func (b *BitcoinOpCode) opEqual() bool {
 	if len(b.stack) < 2 {
 		return false
 	}
@@ -317,7 +322,7 @@ func (b *BitCoinOpCode) opEqual() bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opVerify() bool {
+func (b *BitcoinOpCode) opVerify() bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -331,29 +336,29 @@ func (b *BitCoinOpCode) opVerify() bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opEqualVerify() bool {
+func (b *BitcoinOpCode) opEqualVerify() bool {
 	resEqual := b.opEqual()
 	resVerify := b.opVerify()
 	return resEqual && resVerify
 }
 
 /*
-popStack
 OP_CHECKMULTISIG, structure of the evaluated stack:
-1, number of public keys (2 pubKeys)
-2, pubKey 2
-3, pubKey 1
+1. number of public keys (2 pubKeys)
+2. public-Key2
+3. public-Key1
 4. number of signatures (1 signature)
 5. signature
 6. []
 */
-func (b *BitCoinOpCode) popStack() []byte {
+
+func (b *BitcoinOpCode) popStack() []byte {
 	elem := b.stack[len(b.stack)-1]
 	b.stack = b.stack[0 : len(b.stack)-1]
 	return elem
 }
 
-func (b *BitCoinOpCode) opCheckMultiSig(zBin []byte) bool {
+func (b *BitcoinOpCode) opCheckMultiSig(zBin []byte) bool {
 	if len(b.stack) < 1 {
 		return false
 	}
@@ -416,7 +421,7 @@ func (b *BitCoinOpCode) opCheckMultiSig(zBin []byte) bool {
 	return true
 }
 
-func (b *BitCoinOpCode) opCheckSig(zBin []byte) bool {
+func (b *BitcoinOpCode) opCheckSig(zBin []byte) bool {
 	/*
 			OP_CHECKSIG verify the validity of the message z,
 			DER binary data of the signature and the uncompressed sec public key
@@ -429,7 +434,7 @@ func (b *BitCoinOpCode) opCheckSig(zBin []byte) bool {
 			if the signature verification success, push 1 on the stack, otherwise
 			push 0 on the stack
 
-			if the script is using uncompressed sec format for a public key,
+			if the script is using uncompressed sec format for publicKey,
 			then the script is called P2PK (pay for a public key)
 	*/
 	if len(b.stack) < 2 {
@@ -457,17 +462,17 @@ func (b *BitCoinOpCode) opCheckSig(zBin []byte) bool {
 	return true
 }
 
-func (b *BitCoinOpCode) RemoveCmd() []byte {
+func (b *BitcoinOpCode) RemoveCmd() []byte {
 	cmd := b.commands[0]
 	b.commands = b.commands[1:]
 	return cmd
 }
 
-func (b *BitCoinOpCode) HasCmd() bool {
+func (b *BitcoinOpCode) HasCmd() bool {
 	return len(b.commands) > 0
 }
 
-func (b *BitCoinOpCode) opP2sh() bool {
+func (b *BitcoinOpCode) opP2sh() bool {
 	//the first command is OP_HASH160
 	b.RemoveCmd()
 	//second element is data chunk
@@ -505,7 +510,21 @@ func (b *BitCoinOpCode) opP2sh() bool {
 
 }
 
-func (b *BitCoinOpCode) AppendDataElement(element []byte) {
+func (b *BitcoinOpCode) handleP2WPKH() {
+	if len(b.commands) == 2 && b.commands[0][0] == OP_0 && len(b.commands[1]) == 20 {
+		b.RemoveCmd()
+		//remove OP_0
+		h160 := b.RemoveCmd()
+
+		//set up signature and pub key
+		b.commands = append(b.commands, b.witness...)
+		//set up P2PK verify command
+		p2sh := P2pkScript(h160)
+		b.commands = append(b.commands, p2sh.bitcoinOpCode.commands...)
+	}
+}
+
+func (b *BitcoinOpCode) AppendDataElement(element []byte) {
 	b.stack = append(b.stack, element)
 	/*
 		everytime we push a data element, we need to check the command stack
@@ -517,7 +536,7 @@ func (b *BitCoinOpCode) AppendDataElement(element []byte) {
 	}
 }
 
-func (b *BitCoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
+func (b *BitcoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 	/*
 		if the operation executed successfully then return true,
 		otherwise return false
@@ -536,6 +555,7 @@ func (b *BitCoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 		return b.opCheckMultiSig(z)
 	case OP_P2SH:
 		return b.opP2sh()
+
 	case OP_0:
 		fallthrough
 	case OP_1:
@@ -580,7 +600,7 @@ func (b *BitCoinOpCode) ExecuteOperation(cmd int, z []byte) bool {
 	return false
 }
 
-func (b *BitCoinOpCode) EncodeNum(num int64) []byte {
+func (b *BitcoinOpCode) EncodeNum(num int64) []byte {
 	if num == 0 {
 		//not push 0x00 but empty byte string
 		return []byte("")
@@ -597,7 +617,7 @@ func (b *BitCoinOpCode) EncodeNum(num int64) []byte {
 	for absNum > 0 {
 		/*
 					append the last byte of asbNum into a result,
-			        a notice result will be little endian byte array of absNum
+			        the notice result will be little endian byte array of absNum
 		*/
 		result = append(result, byte(absNum&0xff))
 		absNum >>= 8
@@ -624,7 +644,7 @@ func (b *BitCoinOpCode) EncodeNum(num int64) []byte {
 	return result
 }
 
-func (b *BitCoinOpCode) DecodeNum(element []byte) int64 {
+func (b *BitcoinOpCode) DecodeNum(element []byte) int64 {
 	//check empty byte string
 	if len(element) == 0 {
 		return 0

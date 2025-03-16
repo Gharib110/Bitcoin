@@ -46,14 +46,11 @@ func MerkleParent(hash1 []byte, hash2 []byte) []byte {
 	return ecc.Hash256(string(buf))
 }
 
-/*
-MerkleParentLevel
-
-	if there are even number of hashes, put them into pairs, and compute merkle parent for each pair
-	if there is odd number, duplicate the last one, put them into pairs, and compute merkle parent for each pair,
-*/
 func MerkleParentLevel(hashes [][]byte) [][]byte {
-
+	/*
+	   if there are even number of hashes, put them into pairs, and compute merkle parent for each pair
+	   if there is an odd number, duplicate the last one, put them into pairs, and compute merkle parent for each pair,
+	*/
 	if len(hashes) <= 1 {
 		panic("can't take parent level with no more than 1 item")
 	}
@@ -307,8 +304,8 @@ func (m *MerkleTree) IsLeaf() bool {
 
 func (m *MerkleTree) RightExist() bool {
 	/*
-	   if the number of nodes in the list is not power of 2, then some nodes may not have
-	   a right child
+			    if the number of nodes in the list is not power of 2, then some nodes may not have
+		        a right child
 	*/
 	//bug fix
 	return len(m.nodes[m.currentDepth+1]) > int(m.currentIndex)*2+1

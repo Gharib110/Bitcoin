@@ -7,4 +7,7 @@ require (
 	golang.org/x/crypto v0.36.0
 )
 
-require golang.org/x/example/hello v0.0.0-20241216154601-40afcb705d05 // indirect
+require (
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
+	golang.org/x/example/hello v0.0.0-20241216154601-40afcb705d05 // indirect
+)

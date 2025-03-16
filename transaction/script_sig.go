@@ -9,7 +9,9 @@ import (
 
 type ScriptSig struct {
 	commands      [][]byte
-	bitcoinOpCode *BitCoinOpCode
+	bitcoinOpCode *BitcoinOpCode
+	//add witness data
+	witness [][]byte
 }
 
 const (
@@ -94,7 +96,13 @@ func NewScriptSig(reader *bufio.Reader) *ScriptSig {
 	return InitScriptSig(commands)
 }
 
+func (s *ScriptSig) SetWitness(witness [][]byte) {
+	s.bitcoinOpCode.witness = witness
+}
+
 func (s *ScriptSig) Evaluate(z []byte) bool {
+	s.bitcoinOpCode.handleP2WPKH()
+
 	for s.bitcoinOpCode.HasCmd() {
 		cmd := s.bitcoinOpCode.RemoveCmd()
 		if len(cmd) == 1 {
@@ -163,7 +171,7 @@ func (s *ScriptSig) Serialize() []byte {
 	rawResult := s.rawSerialize()
 	total := len(rawResult)
 	result := []byte{}
-	//encode the total length of a script at the head
+	//encode the total length of the script at the head
 	result = append(result, EncodeVariant(big.NewInt(int64(total)))...)
 	result = append(result, rawResult...)
 	return result

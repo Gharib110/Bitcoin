@@ -12,9 +12,9 @@ import (
 )
 
 /*
-Hash256
 z, sha256(sha256(create a text)) -> 256bits-> 32bytes integer
 */
+
 func Hash256(text string) []byte {
 	hashOnce := sha256.Sum256([]byte(text))
 	hashTwice := sha256.Sum256(hashOnce[:])

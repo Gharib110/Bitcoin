@@ -122,7 +122,11 @@ func EncodeVariant(v *big.Int) []byte {
 	//if the value < 0xfd, one byte is enough
 	if v.Cmp(big.NewInt(int64(0xfd))) < 0 {
 		vBytes := v.Bytes()
-		return []byte{vBytes[0]}
+		//if the value of v is 0, then vBytes will be nil
+		if len(vBytes) != 0 {
+			return []byte{vBytes[0]}
+		}
+		return []byte{0x00}
 	} else if v.Cmp(big.NewInt(int64(0x10000))) < 0 {
 		//if value >= 0xfd and < 0x10000, then need 2 bytes
 		buf := []byte{0xfd}

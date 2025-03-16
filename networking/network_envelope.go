@@ -11,6 +11,7 @@ import (
 )
 
 /*
+NetworkEnvelope
 packet: 1, header, payload
 
 f9beb4d9
@@ -36,7 +37,6 @@ command is used to indicate the purpose of this packet
 
 5. the remaining data is payload
 */
-
 type NetworkEnvelope struct {
 	command []byte
 	payload []byte
@@ -148,12 +148,12 @@ func (n *NetworkEnvelope) String() string {
 }
 
 /*
-Raw data for version command:
+raw data for version command:
 7f110100
 
 0000000000000000
 
-Ad17835b00000000
+ad17835b00000000
 
 0000000000000000
 
@@ -167,7 +167,7 @@ Ad17835b00000000
 
 8d20
 
-F6a8d7a440ec27a1
+f6a8d7a440ec27a1
 
 1b
 
@@ -177,7 +177,7 @@ F6a8d7a440ec27a1
 
 01
 
-1. the first 4 bytes is version number of the node, it is in little-endian, 7f110100=70015
+1. the first 4 bytes is version number of the node, it in little endian, 7f110100=70015
 
 2. the following 8 bytes: 0000000000000000 is network service of sender, little endian
 
@@ -192,9 +192,9 @@ mapping ip4 => ip6, 00000000000000000000ffff => telling the sender is in ip4 for
 6. the following 2 bytes: 8d20, it is port of sender, 8333 is default port for bitcoin node
 of main-net, if the node is on the testnet, 18333
 
-7, the following 8 bytes: 0000000000000000 in little-endian it is a network service of sender
+7. the following 8 bytes: 0000000000000000 in little endian it is a network service of sender
 
-8, the following 16 bytes: 00000000000000000000ffff00000000, ip of sender
+8. the following 16 bytes: 00000000000000000000ffff00000000, ip of sender
 00000000000000000000ffff => ip4, 00000000 => 0.0.0.0
 
 9. the following 2 bytes => port of sender 8d20=>8333
@@ -203,21 +203,21 @@ of main-net, if the node is on the testnet, 18333
 
 11. 1b it is the length of the following data chunk, which is a variant int length
 
-12, the following data chunk with the given length above is user agent:
+12. the following data chunk with the given length above is user agent:
 2f70726f6772616d6d696e67626c6f636b636861696e3a302e312f
 actually is a string content.
 
-13, the following 4 bytes is the number of latest block in this node 00000000
+13. the following 4 bytes is the number of latest block in this node 00000000
 
-14, the final byte is relay, 01=> relay is true, otherwise relay is false
+14. the final byte is relay, 01=> relay is true, otherwise relay is false
 
-When a node first setup and running, it will get a set of friends by p2p protocol,
+when a node first setup and running, it will get a set of friends by p2p protocol,
 but the peer it wants to find may not in the set of friends.
 
 Bob's friends: Jim and Tom,
 but Bob wants to find Alice
 
-If Alice is a friend of Tom,
+if Alice is a friend of Tom,
 Bob will send packets to Jim and Tom together,
 then Tom will relay the packet to Alice
 */
